@@ -1,6 +1,8 @@
 ;================= Class_LV_Colors v1.0.0 =================
 ; ListView row and cell coloring class - provides functionality to set individual
 ; colors for ListView rows and cells with support for alternate row/column coloring.
+#Requires AutoHotkey v2.0+
+#SingleInstance Force
 
 Class LV_Colors {
    ; Constructor - Create a new LV_Colors instance for the given ListView

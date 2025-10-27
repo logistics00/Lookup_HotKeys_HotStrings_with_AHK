@@ -5,91 +5,98 @@
 #Requires AutoHotkey v2.0.2+
 #SingleInstance Force
 
+#Include CoreModule_v2.ahk
+moduleCore := CoreModule()
+
 ; Explicitly declare global functions and variables used from other modules
-global logToFile
-global logMsgBox
+
+; NMS Next two Lines commented because of Class concept
+; global logToFile
+; global logMsgBox
+
 global objScript
 global g_mainListView
 global g_contextMenu
 
-; Initialize the context menu with options
-InitializeContextMenu() {
-    global g_contextMenu
+Class GuiContextMenu {
+    ; Initialize the context menu with options
+    InitializeContextMenu() {
+        global g_contextMenu
 
-    ; Create context menu for ListView
-    g_contextMenu := Menu()
-    g_contextMenu.Add("Edit Script", OnMenuEditScript)
+        ; Create context menu for ListView
+        g_contextMenu := Menu()
+        g_contextMenu.Add("Edit Script", this.OnMenuEditScript)
 
-    logToFile("Context menu initialized with Edit Script option")
-}
-
-; Handle ListView context menu
-OnListViewContextMenu(ctrl, itemPos, *) {
-    global g_mainListView, g_contextMenu
-
-    ; Check that we have valid objects
-    if (!IsObject(g_mainListView)) {
-        logToFile("ERROR: Invalid g_mainListView in OnListViewContextMenu")
-        return
+        moduleCore.logToFile("Context menu initialized with Edit Script option")
     }
 
-    if (!IsObject(g_contextMenu)) {
-        logToFile("ERROR: Invalid g_contextMenu in OnListViewContextMenu")
-        return
-    }
+    ; Handle ListView context menu
+    OnListViewContextMenu(ctrl, itemPos, *) {
+        global g_mainListView, g_contextMenu
 
-    ; Check if an item is selected
-    try {
-        row := g_mainListView.GetNext()
-
-        if (!row) {
-            ; If no item is selected, try to select the item under the mouse
-            if (itemPos) {
-                row := g_mainListView.GetNext(0, "Pos " itemPos)
-                if (row)
-                    g_mainListView.Modify(row, "Select Focus")
-            }
-        }
-
-        ; If we have a selected row, show the context menu
-        if (row) {
-            command := g_mainListView.GetText(row, 1)
-            logToFile("Showing context menu for row " row " with command: " command)
-            g_contextMenu.Show()
-        }
-    } catch as err {
-        logToFile("ERROR in context menu handling: " err.Message)
-    }
-}
-
-; Menu handlers
-OnMenuEditScript(*) {
-    global g_mainListView
-
-    if (!IsObject(g_mainListView)) {
-        logToFile("ERROR: Invalid g_mainListView in OnMenuEditScript")
-        return
-    }
-
-    try {
-        row := g_mainListView.GetNext()
-        if (!row)
+        ; Check that we have valid objects
+        if (!IsObject(g_mainListView)) {
+            moduleCore.logToFile("ERROR: Invalid g_mainListView in OnListViewContextMenu")
             return
-
-        ; Get script info
-        scriptName := g_mainListView.GetText(row, 4)
-        lineNumber := g_mainListView.GetText(row, 5)
-        scriptPath := g_mainListView.GetText(row, 6)
-
-        ; Try to open script
-        if (scriptPath && FileExist(scriptPath)) {
-            OpenScript(scriptPath, scriptName, lineNumber)
-        } else {
-            MsgBox("Script path not found: " scriptPath, "Error", "0x10")
         }
-    } catch as err {
-        logToFile("ERROR in OnMenuEditScript: " err.Message)
+
+        if (!IsObject(g_contextMenu)) {
+            moduleCore.logToFile("ERROR: Invalid g_contextMenu in OnListViewContextMenu")
+            return
+        }
+
+        ; Check if an item is selected
+        try {
+            row := g_mainListView.GetNext()
+
+            if (!row) {
+                ; If no item is selected, try to select the item under the mouse
+                if (itemPos) {
+                    row := g_mainListView.GetNext(0, "Pos " itemPos)
+                    if (row)
+                        g_mainListView.Modify(row, "Select Focus")
+                }
+            }
+
+            ; If we have a selected row, show the context menu
+            if (row) {
+                command := g_mainListView.GetText(row, 1)
+                moduleCore.logToFile("Showing context menu for row " row " with command: " command)
+                g_contextMenu.Show()
+            }
+        } catch as err {
+            moduleCore.logToFile("ERROR in context menu handling: " err.Message)
+        }
+    }
+
+    ; Menu handlers
+    OnMenuEditScript(*) {
+        global g_mainListView
+
+        if (!IsObject(g_mainListView)) {
+            moduleCore.logToFile("ERROR: Invalid g_mainListView in OnMenuEditScript")
+            return
+        }
+
+        try {
+            row := g_mainListView.GetNext()
+            if (!row)
+                return
+
+            ; Get script info
+            scriptName := g_mainListView.GetText(row, 4)
+            lineNumber := g_mainListView.GetText(row, 5)
+            scriptPath := g_mainListView.GetText(row, 6)
+
+            ; Try to open script
+            if (scriptPath && FileExist(scriptPath)) {
+                this.OpenScript(scriptPath, scriptName, lineNumber)
+            } else {
+                MsgBox("Script path not found: " scriptPath, "Error", "0x10")
+            }
+        } catch as err {
+            moduleCore.logToFile("ERROR in OnMenuEditScript: " err.Message)
+        }
     }
 }
-
 ;================= End of GuiContextMenu =================
