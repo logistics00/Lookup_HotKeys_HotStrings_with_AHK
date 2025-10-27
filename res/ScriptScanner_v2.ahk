@@ -27,19 +27,58 @@ Loop skipScripts.Length
     if !InStr(skipScripts[A_Index], ';')
         arraySkipScriptList.Push(SubStr(skipScripts[A_Index],2))
 
-Class ScriptScanner{
-    ; Retrieve running AutoHotkey scripts
+Class ScriptScanner {
+    /**
+     * getRunningScripts - Detects and returns all currently running AutoHotkey scripts
+     * 
+     * Purpose:
+     *   Scans the system for active AutoHotkey scripts by searching for windows with
+     *   the "AutoHotkey" class. Filters out scripts that match entries in the skip list
+     *   (loaded from Skip_Scripts.ini). This is the entry point for identifying which
+     *   scripts should be analyzed for hotkeys and hotstrings.
+     * 
+     * Process Flow:
+     *   1. Enables detection of hidden windows to find all AHK instances
+     *   2. Searches for all windows with "ahk_class AutoHotkey"
+     *   3. For each window found:
+     *      - Extracts the script path from the window title
+     *      - Checks if the script is in the skip list (by name or full path)
+     *      - Validates that the file exists on disk
+     *      - Adds valid scripts to the results array
+     *   4. If no scripts found, adds the current script as a fallback
+     *   5. Logs all findings for debugging purposes
+     * 
+     * Parameters: None
+     * 
+     * Returns:
+     *   Array of objects, each containing:
+     *     - hwnd: Window handle (integer) of the running script
+     *     - path: Full file path (string) to the .ahk file
+     * 
+     * Example Return:
+     *   [{hwnd: 12345, path: "C:\Scripts\MyScript.ahk"},
+     *    {hwnd: 67890, path: "C:\Scripts\Another.ahk"}]
+     * 
+     * Dependencies:
+     *   - arraySkipScriptList (global): List of script names/paths to ignore
+     *   - moduleCore.logToFile(): For debug logging
+     * 
+     * Notes:
+     *   - Uses exact matching for skip list entries (both filename and full path)
+     *   - Always includes at least one script (the current script if none found)
+     *   - Logs extensively for troubleshooting script detection issues
+     */
+    ; New : 25-01-24
+    ; getRunningScripts : () : Retrieve running AutoHotkey scripts
+    ; Returns : array - Array of script objects with hwnd and path properties
     getRunningScripts() {
         ; NMS Next line added
         moduleCore.logToFile("========== ScriptScanner / getRunningScripts ==========", 'NMS')
         arrayScripts := []
         DetectHiddenWindows(true)
 
-        ; NMS Next 2 lines
-        ; moduleCore.logToFile("========== Script Detection ==========", false)
         moduleCore.logToFile("========== Script Detection ==========")
-        moduleCore.logToFile("Time: " A_Now)
-        moduleCore.logToFile("Starting script detection...")
+        moduleCore.logToFile("Time: " A_Now "Starting script detection...")
 
         ; Log skip list in a more readable format
         skipListStr := ""
@@ -52,7 +91,7 @@ Class ScriptScanner{
         winList := WinGetList("ahk_class AutoHotkey")
         scriptCount := 0
 
-        moduleCore.logToFile("Looking for scripts by window class 'AutoHotkey'...")
+        moduleCore.logToFile('Looking for scripts by window class `'AutoHotkey`'...')
 
         for window in winList {
             scriptPath := WinGetTitle("ahk_id " window)
@@ -124,7 +163,55 @@ Class ScriptScanner{
         return arrayScripts
     }
 
-    ; Get script details from window handle or path
+    /**
+     * getScript - Extracts and validates script information from a window handle or script object
+     * 
+     * Purpose:
+     *   Normalizes script information into a standard format. Accepts either a script object
+     *   (with hwnd and path properties) or just a window handle, and returns a complete
+     *   script information object with parsed path components.
+     * 
+     * Process Flow:
+     *   1. Determines input type (object with properties or raw hwnd)
+     *   2. If object: Validates it has required properties (hwnd and path)
+     *   3. If hwnd only: Retrieves path from window title
+     *   4. Validates that the script file exists on disk
+     *   5. Splits path into components (name and directory)
+     *   6. Returns standardized object with all script details
+     * 
+     * Parameters:
+     *   scriptInfo (object|int): Either:
+     *     - Object with {hwnd: int, path: string} properties
+     *     - Integer window handle (legacy behavior)
+     * 
+     * Returns:
+     *   Object containing:
+     *     - hwnd (int): Window handle of the script
+     *     - scriptPath (string): Full path to the .ahk file
+     *     - scriptName (string): Filename only (e.g., "MyScript.ahk")
+     *     - scriptDir (string): Directory path only (e.g., "C:\Scripts")
+     * 
+     * Error Handling:
+     *   - Invalid object: Returns object with empty/zero values
+     *   - Non-existent file: Logs warning but still returns parsed information
+     * 
+     * Example Usage:
+     *   scriptDetails := scanner.getScript({hwnd: 12345, path: "C:\Scripts\Test.ahk"})
+     *   ; Returns: {hwnd: 12345, scriptPath: "C:\Scripts\Test.ahk",
+     *   ;           scriptName: "Test.ahk", scriptDir: "C:\Scripts"}
+     * 
+     * Dependencies:
+     *   - moduleCore.logToFile(): For debug logging
+     * 
+     * Notes:
+     *   - Supports both new (object) and legacy (hwnd only) calling conventions
+     *   - Always logs detailed information for debugging
+     *   - Window title parsing removes " - AutoHotkey" suffix
+     */
+    ; New : 25-01-24
+    ; getScript : (scriptInfo) : Get script details from window handle or path
+    ; scriptInfo : object|int - Script info object with hwnd/path or just hwnd value
+    ; Returns : object - Object with hwnd, scriptPath, scriptName, and scriptDir
     getScript(scriptInfo) {
         ; NMS 1 line added
         moduleCore.logToFile("========== ScriptScanner / getScript ==========", 'NMS')
@@ -163,20 +250,153 @@ Class ScriptScanner{
         return {hwnd: hwnd, scriptPath: scriptPath, scriptName: scriptName, scriptDir: scriptDir}
     }
 
-    ; Load hotkeys and hotstrings from scripts - FIXED WITH WORKING REGEX AND COMMAND EXTRACTION
+    /**
+     * loadCommands - Main function to scan scripts and extract all hotkeys and hotstrings
+     * 
+     * Purpose:
+     *   This is the core processing function that reads through all script files (both
+     *   running and from search folders), extracts hotkey/hotstring definitions, processes
+     *   Triggers-based commands from settings.ini files, and builds a comprehensive list
+     *   of all keyboard shortcuts with conflict detection.
+     * 
+     * Process Flow:
+     *   1. INITIALIZATION:
+     *      - Reads additional script folders from Search_Folders.ini
+     *      - Adds non-running scripts from search folders to scan list
+     *      - Initializes global arrays and counters
+     * 
+     *   2. FOR EACH SCRIPT:
+     *      - Reads the entire script file into memory
+     *      - Extracts script metadata (name, directory, path)
+     *   
+     *   3. DIRECT HOTKEY/HOTSTRING EXTRACTION:
+     *      - Uses regex patterns to find hotkey definitions (e.g., "^!c::")
+     *      - Uses regex patterns to find hotstring definitions (e.g., "::btw::")
+     *      - Extracts inline comments for descriptions
+     *      - Stores line numbers for reference
+     *      - Captures multi-line descriptions when present
+     * 
+     *   4. TRIGGERS-BASED COMMAND PROCESSING:
+     *      - Detects if script uses the Triggers class
+     *      - Locates associated settings.ini file
+     *      - Calls TriggerIniScanner to extract Triggers-defined shortcuts
+     *      - Merges Triggers data with direct hotkey/hotstring data
+     * 
+     *   5. CONFLICT DETECTION:
+     *      - Compares all found shortcuts against each other
+     *      - Identifies duplicate bindings across scripts
+     *      - Marks conflicts in the data structure
+     * 
+     *   6. DATA COMPILATION:
+     *      - Builds arrayBaseList with all commands and metadata
+     *      - Populates arrayKeyBindings with simplified binding info
+     *      - Tracks statistics (counts by type, by script)
+     * 
+     * Parameters:
+     *   arrayScripts (array): Array of script objects from getRunningScripts()
+     *     Each object should have: {hwnd: int, path: string}
+     * 
+     * Global Variables Modified:
+     *   - arrayBaseList: Complete list of all commands with full metadata
+     *   - arrayKeyBindings: Simplified list for quick lookup
+     *   - hotkeyCount: Total number of hotkeys found
+     *   - hotstringCount: Total number of hotstrings found
+     *   - triggersCount: Total Triggers-based commands found
+     * 
+     * Regex Patterns Used:
+     *   - Hotkey pattern: Matches modifier keys + key combinations (^!+#)
+     *   - Hotstring pattern: Matches ::trigger:: format with options
+     *   - Comment extraction: Captures inline ; comments for descriptions
+     * 
+     * Data Structure Created:
+     *   arrayBaseList contains objects with:
+     *     - command: The hotkey/hotstring trigger (e.g., "^!c", "::btw")
+     *     - description: Comment text explaining what it does
+     *     - type: "k" for hotkey, "s" for hotstring
+     *     - file: Name of the script file
+     *     - line: Line number in the source file
+     *     - source: "direct" or "triggers"
+     *     - scriptPath: Full path to the script
+     *     - hasConflict: Boolean indicating if binding conflicts with another
+     * 
+     * Dependencies:
+     *   - moduleCore.logToFile(): Extensive logging for debugging
+     *   - trIniSc.ScanTriggersIni(): Processes Triggers settings.ini files
+     *   - Search_Folders.ini: List of additional folders to scan
+     *   - Skip_Scripts.ini: Scripts to exclude from scanning
+     * 
+     * Performance Notes:
+     *   - Reads entire files into memory (suitable for typical script sizes)
+     *   - Uses regex for pattern matching (efficient for script files)
+     *   - May take several seconds for large script collections
+     *   - Logs extensively - can generate large log files
+     * 
+     * Error Handling:
+     *   - Catches and logs file read errors
+     *   - Handles missing settings.ini gracefully
+     *   - Validates Triggers function availability
+     *   - Falls back to basic processing if Triggers scanner fails
+     * 
+     * Example Log Output:
+     *   "Processing script: MyScript.ahk"
+     *   "  Direct hotkeys found: 15"
+     *   "  Triggers-based commands: 8"
+     *   "  Total commands found: 23"
+     * 
+     * Notes:
+     *   - The function is quite large (400+ lines) due to comprehensive processing
+     *   - Contains extensive debug logging (can be disabled for production)
+     *   - Handles both v1 and v2 AutoHotkey syntax patterns
+     *   - Special handling for mouse triggers (LButton, RButton, etc.)
+     */
+    ; New : 25-01-24
+    ; loadCommands : (arrayScripts) : Load hotkeys and hotstrings from scripts
+    ; arrayScripts : array - Array of script objects to scan
     loadCommands(arrayScripts) {
         ; NMS Next 10 lines added
         searchFolders := StrSplit(FileRead('Search_Folders.ini'), ',', '`n')
         arrayScriptsText := jsongo.Stringify(arrayScripts)
         arraySkipScriptListText := jsongo.Stringify(arraySkipScriptList)
         Loop searchFolders.Length {
-            Loop Files searchFolders[A_Index] '\*.ahk*' {
+            Loop Files String(searchFolders[A_Index]) '\*.ahk*' {
                 if !(InStr(arrayScriptsText, A_LoopFileName) || InStr(arraySkipScriptListText, A_LoopFileName)) {
                     arrayScripts.Push({hwnd: 0, path: A_LoopFilePath})
                 }
             }
         }
         moduleCore.logToFile("========== ScriptScanner / loadCommands ==========", 'NMS')
+
+            ; ========================================
+            ; PATTERN DEFINITIONS AND EXPLANATION
+            ; ========================================
+            
+            ; HOTKEY PATTERN (hotkeyPattern):
+            ; Matches standard AutoHotkey hotkey definitions like: ^!c::, #f::, +Home::
+            ; Pattern breakdown:
+            ;   ^(?P<hk>[\^!+#]*\S+?)::  - Captures modifier keys (^!+#) + key name before ::
+            ;   \s*{?               - Optional whitespace and opening brace
+            ;   \s*;?\s*            - Optional whitespace around comment marker
+            ;   (?P<comment>.*)     - Captures the rest as comment/description
+            ; Examples matched:
+            ;   ^!c::               ; Copy text
+            ;   #f:: Send "hello"
+            ;   +Home::
+            
+            ; HOTSTRING PATTERN (hotstringPattern):
+            ; Matches AutoHotkey hotstring definitions like: ::btw::, :*:omw::
+            ; Pattern breakdown:
+            ;   ^:(?P<opts>[*?0-9bcikoprsez]*)  - Captures hotstring options
+            ;   :(?P<trigger>[^:]+)::           - Captures trigger text between ::
+            ;   \s*{?                           - Optional whitespace and brace
+            ;   \s*;?\s*                        - Optional comment marker
+            ;   (?P<comment>.*)                 - Captures comment/description
+            ; Examples matched:
+            ;   ::btw::by the way
+            ;   :*:omw::on my way
+            ;   :c:addr::123 Main St
+            ; hotkeyPattern := "im)^(?P<hk>[\^!+#]*\S+?)::(?:\s*\{?)\s*;?\s*(?P<comment>.*)"
+            ; hotstringPattern := "im)^:(?P<opts>[*?0-9bcikoprsez]*):(?P<trigger>[^:]+)::(?:\s*\{?)\s*;?\s*(?P<comment>.*)"
+
         ; FIXED: Simple working regex patterns
         hotkeyRegex     := "^(?<hk>\S+)::"                    ; Simple pattern that works with #h::
         hotstringRegex  := "^(?!$)\s*:(?<hsopts>(?:[*?BCKOPRTXZ0-9]|S(?:I|E|P))*):(?<hs>.*?)::(?<hstext>.*?)(?<comment>;.*?)?\s*$"
@@ -216,7 +436,7 @@ Class ScriptScanner{
                 moduleCore.logToFile("  FILE CONTENTS:")
                 fileLines := StrSplit(scriptContents, "`n", "`r")
                 for lineIndex, lineContent in fileLines {
-                    moduleCore.logToFile("    Line " lineIndex ": '" lineContent "'")
+                    moduleCore.logToFile('    Line ' lineIndex ': ' lineContent)
                 }
 
             } catch as err {
@@ -236,7 +456,7 @@ Class ScriptScanner{
 
             cnt2 := 0
             for lineNum, line in StrSplit(scriptContents, "`n", "`r") {
-                moduleCore.logToFile("    Processing line " lineNum ": '" line "'")
+                moduleCore.logToFile('    Processing line ' lineNum ': ' line)
                 cnt2++
                 if cnt2 < 0
                     MsgBox('lineNum:`t' lineNum '`nline:`t' line) 
@@ -283,16 +503,16 @@ Class ScriptScanner{
                     command := ""
                     if (IsObject(matchHotkey) && matchHotkey.HasOwnProp("hk")) {
                         command := Trim(matchHotkey.hk)
-                        moduleCore.logToFile("         Extracted hotkey command via .hk property: '" command "'")
+                        moduleCore.logToFile('         Extracted hotkey command via .hk property: ' command)
                     } else if (IsObject(matchHotkey) && matchHotkey.HasOwnProp("1")) {
                         command := Trim(matchHotkey[1])
-                        moduleCore.logToFile("         Extracted hotkey command via [1] index: '" command "'")
+                        moduleCore.logToFile('         Extracted hotkey command via [1] index: ' command)
                     } else {
                         ; Fallback: extract manually from the line
                         colonPos := InStr(line, "::")
                         if (colonPos > 0) {
                             command := Trim(SubStr(line, 1, colonPos - 1))
-                            moduleCore.logToFile("         Extracted hotkey command manually: '" command "'")
+                            moduleCore.logToFile('         Extracted hotkey command manually: ' command)
                         } else {
                             moduleCore.logToFile("         ERROR: Could not extract hotkey command")
                             command := ""
@@ -305,7 +525,7 @@ Class ScriptScanner{
                         colonPos := InStr(line, "::")
                         if (colonPos > 0) {
                             command := Trim(SubStr(line, 1, colonPos - 1))
-                            moduleCore.logToFile("         Fallback command: '" command "'")
+                            moduleCore.logToFile('         Fallback command: ' command)
                         }
                     }
 
@@ -315,7 +535,7 @@ Class ScriptScanner{
                         commentPos := InStr(line, ";")
                         commentText := SubStr(line, commentPos + 1)
                         description := Trim(commentText)
-                        moduleCore.logToFile("         Extracted comment manually: '" description "'")
+                        moduleCore.logToFile('         Extracted comment manually: ' description)
                     } else {
                         moduleCore.logToFile("         No comment found")
                     }
@@ -323,7 +543,7 @@ Class ScriptScanner{
                     lineType := "hotkey"
                     hotkeyCount++
                     localHotkeyCount++
-                    moduleCore.logToFile("         -> HOTKEY CONFIRMED: '" command "' with description: '" description "'")
+                    moduleCore.logToFile('         -> HOTKEY CONFIRMED: ' command ' with description: ' description)
                 }
                 else {
                     moduleCore.logToFile("      -> No hotkey match")
@@ -337,9 +557,9 @@ Class ScriptScanner{
 
                         ; Test the simple pattern directly
                         if (RegExMatch(beforeColon, "^\S+$")) {
-                            moduleCore.logToFile("         Should have matched! Pattern ^\S+$ works on '" beforeColon "'")
+                            moduleCore.logToFile('         Should have matched! Pattern ^\S+$ works on ' beforeColon)
                         } else {
-                            moduleCore.logToFile("         Pattern ^\S+$ doesn't match '" beforeColon "'")
+                            moduleCore.logToFile('         Pattern ^\S+$ doesn`'t match ' beforeColon)
                         }
                     } else {
                         moduleCore.logToFile("         Line does NOT contain '::' - not a hotkey")
@@ -352,15 +572,15 @@ Class ScriptScanner{
                     moduleCore.logToFile("      -> HOTSTRING MATCH FOUND!")
 
                     command := Trim(matchHotstring.hs)
-                    moduleCore.logToFile("         Extracted hotstring: '" command "'")
+                    moduleCore.logToFile('         Extracted hotstring: ' command)
 
                     ; For hotstrings, prefer the replacement text, then comment
                     if (matchHotstring.hstext && Trim(matchHotstring.hstext) != "") {
                         description := Trim(matchHotstring.hstext)
-                        moduleCore.logToFile("         Using replacement text as description: '" description "'")
+                        moduleCore.logToFile('         Using replacement text as description: ' description)
                     } else if (matchHotstring.HasOwnProp("comment") && matchHotstring.comment) {
                         description := Trim(RegExReplace(matchHotstring.comment, "^;\s*"))
-                        moduleCore.logToFile("         Using comment as description: '" description "'")
+                        moduleCore.logToFile('         Using comment as description: ' description)
                     } else {
                         description := ""
                         moduleCore.logToFile("         No description found")
@@ -392,11 +612,11 @@ Class ScriptScanner{
                                 char := SubStr(inspLine, 7, 1)                                                              ; char should be ' ' or '('
                                 endPos := 7
                                 if (char = ' ' || char = '(') {                                                             ; inspectLine starts with a Hotkey function
-                                    strtPos := Min(single := InStr(inspLine, "'") + 1, double := InStr(inspLine, '"') + 1)  ; Hotkey must start with ' or with "
+                                    strtPos := Min(single := InStr(inspLine, '`'') + 1, double := InStr(inspLine, '"') + 1)  ; Hotkey must start with ' or with "
                                     if strtPos = single
-                                        endPos := InStr(inspLine, "'",,, 2)
+                                        endPos := InStr(inspLine, '`'',,, 2)
                                     else
-                                        endPos := InStr(inspLine, '"',,, 2)
+                                        endPos := InStr(inspLine, '`'',,, 2)
                                     command := command SubStr(inspLine, strtPos, endPos - strtPos) ' '   	                            ; Get the hotkey and end with a space for possible more hotkeys
                                 }
                                 inspLine := SubStr(inspLine, endPos)                                                        ; Make inspLine ready for test for another Hotkey
@@ -637,7 +857,49 @@ Class ScriptScanner{
         }
     }
 
-    ; Helper function to debug match objects - ENHANCED
+    /**
+     * =====================================================================
+     * GetMatchKeys - Debug utility for inspecting RegEx match objects
+     * =====================================================================
+     * 
+     * PURPOSE:
+     *   Helper function to introspect regex match objects and determine what
+     *   properties are accessible. Extremely useful for debugging complex regex 
+     *   patterns when you're unsure what capture groups are available.
+     * 
+     * PROCESS:
+     *   1. Validates input is actually an object
+     *   2. Attempts to access common match object properties:
+     *      - Named capture groups (e.g., "hk", "comment")
+     *      - Numbered capture groups (1, 2, etc.)
+     *      - Standard properties (Count, Len, Pos)
+     *   3. Builds a string with all found properties and their values
+     *   4. Returns diagnostic information
+     * 
+     * PARAMETERS:
+     *   matchObj : RegExMatchInfo object from RegExMatch()
+     * 
+     * RETURNS:
+     *   String describing accessible properties
+     *   Examples:
+     *     "hk='^!c' comment='Copy text' Count=2 Len=10 Pos=1"
+     *     "Not an object - type: String"
+     *     "No accessible properties found"
+     * 
+     * USE CASE:
+     *   When a regex pattern isn't capturing what you expect:
+     *   if RegExMatch(line, pattern, &match)
+     *       MsgBox(this.GetMatchKeys(match))  ; Shows what was captured
+     * 
+     * NOTES:
+     *   - Primarily used during development/debugging
+     *   - Safe to call even with invalid input
+     *   - Particularly useful for patterns with named groups
+     */
+    ; New : 25-01-24
+    ; GetMatchKeys : (matchObj) : Helper function to debug match objects
+    ; matchObj : object - RegEx match object to inspect
+    ; Returns : string - String describing accessible properties
     GetMatchKeys(matchObj) {
         ; NMS 1 line added
         moduleCore.logToFile("========== ScriptScanner / GetMatchKeys ==========", 'NMS')
@@ -649,7 +911,7 @@ Class ScriptScanner{
         try {
             ; Try to access named capture groups
             if (matchObj.HasOwnProp("hk"))
-                keys .= "hk='" matchObj.hk "' "
+                keys .= "hk='" matchObj.hk '`' '
             if (matchObj.HasOwnProp("comment"))
                 keys .= "comment='" matchObj.comment "' "
 
@@ -678,11 +940,57 @@ Class ScriptScanner{
         return keys != "" ? keys : "No accessible properties found"
     }
 
+    /**
+     * =====================================================================
+     * GetNotRunningScripts - Identifies scripts that are not executing
+     * =====================================================================
+     * 
+     * PURPOSE:
+     *   Checks each script in the array to determine if it's currently running.
+     *   Can be used for health monitoring, automatic restart systems, or status 
+     *   reporting in script management tools.
+     * 
+     * PROCESS:
+     *   1. Iterates through the array of script objects
+     *   2. For each script, checks if its window handle is still valid
+     *   3. If window doesn't exist, adds script to "not running" list
+     *   4. Logs the status of each script checked
+     *   5. Returns array of non-running scripts
+     * 
+     * PARAMETERS:
+     *   arrayScripts : Array of script objects with hwnd and path properties
+     * 
+     * RETURNS:
+     *   Array of script objects that are not currently running
+     *   NOTE: Currently returns the ORIGINAL array unchanged (see line 708)
+     *         This appears to be legacy code or placeholder for future functionality
+     * 
+     * USE CASES:
+     *   - Script health monitoring dashboards
+     *   - Automatic script restart systems
+     *   - Status reporting for script management
+     *   - Debugging why certain hotkeys aren't working
+     * 
+     * CURRENT BEHAVIOR:
+     *   Despite building a notRunningScripts array, the function returns the
+     *   original arrayScripts parameter. This may be intentional (to always
+     *   return full list) or may be a placeholder for future enhancement.
+     * 
+     * DEPENDENCIES:
+     *   - Peep(): Debug visualization function
+     *   - moduleCore.logToFile(): For status logging
+     * 
+     * EXAMPLE:
+     *   notRunning := scanner.GetNotRunningScripts(allScripts)
+     *   ; Can use this to alert user or attempt to restart scripts
+     */
+    ; New : 25-01-24
+    ; GetNotRunningScripts : (arrayScripts) : Check for scripts that are not currently running
+    ; arrayScripts : array - Array of script objects to check
+    ; Returns : array - Original array (currently returns all scripts)
     GetNotRunningScripts(arrayScripts) {
         ; NMS 1 line added
         moduleCore.logToFile("========== ScriptScanner / GetNotRunningScripts ==========", 'NMS')
-        moduleCore.logToFile("========== Not Running Scripts Detection ==========")
-        moduleCore.logToFile("Checking for scripts that are not currently running...")
 
         notRunningScripts := []
         for script in arrayScripts {

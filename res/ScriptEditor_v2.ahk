@@ -18,7 +18,11 @@ moduleCore := CoreModule()
 global objScript
 
 Class ScriptEditor {
-    ; Open script with appropriate editor
+    ; New : 25-01-24
+    ; OpenScript : (path, name, lineNumber) : Open script with appropriate editor
+    ; path : string - Full path to script file
+    ; name : string - Script file name
+    ; lineNumber : int - Line number to jump to
     OpenScript(path, name, lineNumber) {
         ; NMS 1 line added
         moduleCore.logToFile("============= ScriptEditor / OpenScript ===============", 'NMS')
@@ -49,7 +53,11 @@ Class ScriptEditor {
         }
     }
 
-    ; Function to find and open the default editor
+    ; New : 25-01-24
+    ; OpenWithDefaultEditor : (scriptPath, lineNum) : Find and open the default editor
+    ; scriptPath : string - Full path to script file
+    ; lineNum : int - Line number to jump to
+    ; Returns : bool - True on success, False on failure
     OpenWithDefaultEditor(scriptPath, lineNum) {
         ; NMS 1 line added
         moduleCore.logToFile("============= ScriptEditor / OpenWithDefaultEditor ===============", 'NMS')
@@ -144,7 +152,10 @@ Class ScriptEditor {
         }
     }
 
-    ; Function to find an editor executable
+    ; New : 25-01-24
+    ; FindEditor : (editorName) : Find an editor executable
+    ; editorName : string - Editor executable name
+    ; Returns : string - Full path to editor or empty string if not found
     FindEditor(editorName) {
         ; NMS 1 line added
         moduleCore.logToFile("============= ScriptEditor / FindEditor ===============", 'NMS')

@@ -32,16 +32,20 @@ CONFLICT_TEXT_COLOR := IniRead('Lookup.ini', 'ListView', 'CONFLICT_TEXT_COLOR')
 
 ; Initialize g_lvColors to prevent unassigned variable errors
 if (!IsSet(g_lvColors)) {
-    g_lvColors := ""
+    g_lvColors := ''
 }
 
 Class GuiListView {
-    ; Function to safely get control properties with multiple methods
+    ; New : 25-01-24
+    ; GetControlProperty : (control, propertyName) : Safely get control properties with multiple methods
+    ; control : object - Control object to query
+    ; propertyName : string - Property name to retrieve
+    ; Returns : string|int - Property value or empty string if not found
     GetControlProperty(control, propertyName) {
         ; NMS 1 line added
-        moduleCore.logToFile("============= GuiListView / GetControlProperty ===============", 'NMS')
+        moduleCore.logToFile('============= GuiListView / GetControlProperty ===============', 'NMS')
         if (!IsObject(control)) {
-            return ""
+            return ''
         }
         
         ; Method 1: Direct property access with HasOwnProp
@@ -61,7 +65,7 @@ Class GuiListView {
         }
         
         ; Method 3: For Hwnd specifically, try alternative methods
-        if (propertyName = "Hwnd") {
+        if (propertyName = 'Hwnd') {
             try {
                 return control.HWND
             } catch {
@@ -76,7 +80,7 @@ Class GuiListView {
         }
         
         ; Method 4: For Type specifically
-        if (propertyName = "Type") {
+        if (propertyName = 'Type') {
             try {
                 return control.ClassNN
             } catch {
@@ -84,138 +88,144 @@ Class GuiListView {
             }
         }
         
-        return ""  ; Property not found
+        return ''  ; Property not found
     }
 
-    ; Function to create and initialize LV_Colors for the ListView
+    ; New : 25-01-24
+    ; InitializeListViewColors : (listView) : Create and initialize LV_Colors for the ListView
+    ; listView : object - ListView control object
+    ; Returns : bool - True on success, False on failure
     InitializeListViewColors(listView) {
         ; NMS 1 line added
-        moduleCore.logToFile("============= GuiListView / InitializeListViewColors ===============", 'NMS')
+        moduleCore.logToFile('============= GuiListView / InitializeListViewColors ===============', 'NMS')
         global g_lvColors
 
         ; Always log the basic initialization
-        moduleCore.logToFile("Initializing ListView colors...")
+        moduleCore.logToFile('Initializing ListView colors...')
         
         ; Enhanced debug logging only if debug enabled
         if (DEBUG_ENABLED) {
-            moduleCore.logDebug("=== DETAILED LISTVIEW COLOR INITIALIZATION ===")
-            moduleCore.logDebug("AutoHotkey version: " . A_AhkVersion)
-            moduleCore.logDebug("Parameter received - Type: " . Type(listView))
-            moduleCore.logDebug("Parameter received - Is Object: " . (IsObject(listView) ? "YES" : "NO"))
+            moduleCore.logDebug('=== DETAILED LISTVIEW COLOR INITIALIZATION ===')
+            moduleCore.logDebug('AutoHotkey version: ' . A_AhkVersion)
+            moduleCore.logDebug('Parameter received - Type: ' . Type(listView))
+            moduleCore.logDebug('Parameter received - Is Object: ' . (IsObject(listView) ? 'YES' : 'NO'))
             
             ; Log color configuration
-            moduleCore.logDebug("Color configuration:")
-            moduleCore.logDebug("  NORMAL_BG_COLOR: 0x" . Format("{:06X}", NORMAL_BG_COLOR))
-            moduleCore.logDebug("  NORMAL_TEXT_COLOR: 0x" . Format("{:06X}", NORMAL_TEXT_COLOR))
-            moduleCore.logDebug("  CONFLICT_BG_COLOR: 0x" . Format("{:06X}", CONFLICT_BG_COLOR))
-            moduleCore.logDebug("  CONFLICT_TEXT_COLOR: 0x" . Format("{:06X}", CONFLICT_TEXT_COLOR))
+            moduleCore.logDebug('Color configuration:')
+            moduleCore.logDebug('  NORMAL_BG_COLOR: 0x' . Format('{:06X}', NORMAL_BG_COLOR))
+            moduleCore.logDebug('  NORMAL_TEXT_COLOR: 0x' . Format('{:06X}', NORMAL_TEXT_COLOR))
+            moduleCore.logDebug('  CONFLICT_BG_COLOR: 0x' . Format('{:06X}', CONFLICT_BG_COLOR))
+            moduleCore.logDebug('  CONFLICT_TEXT_COLOR: 0x' . Format('{:06X}', CONFLICT_TEXT_COLOR))
             
             if (IsObject(listView)) {
-                moduleCore.logDebug("Testing property access methods...")
+                moduleCore.logDebug('Testing property access methods...')
                 
                 ; Test Hwnd property with all methods
-                hwndValue := this.GetControlProperty(listView, "Hwnd")
-                moduleCore.logDebug("Hwnd via GetControlProperty: " . (hwndValue ? hwndValue : "NOT FOUND"))
+                hwndValue := this.GetControlProperty(listView, 'Hwnd')
+                moduleCore.logDebug('Hwnd via GetControlProperty: ' . (hwndValue ? hwndValue : 'NOT FOUND'))
                 
                 ; Test Type property
-                typeValue := this.GetControlProperty(listView, "Type")
-                moduleCore.logDebug("Type via GetControlProperty: " . (typeValue ? typeValue : "NOT FOUND"))
+                typeValue := this.GetControlProperty(listView, 'Type')
+                moduleCore.logDebug('Type via GetControlProperty: ' . (typeValue ? typeValue : 'NOT FOUND'))
             }
         }
 
         ; Validate ListView control
         if (!IsObject(listView)) {
-            moduleCore.logToFile("ERROR: Invalid ListView control - not an object")
+            moduleCore.logToFile('ERROR: Invalid ListView control - not an object')
             return false
         }
         
         ; Get Hwnd using our safe method
-        hwndValue := this.GetControlProperty(listView, "Hwnd")
+        hwndValue := this.GetControlProperty(listView, 'Hwnd')
         if (!hwndValue) {
-            moduleCore.logToFile("ERROR: Cannot get Hwnd property from ListView control")
+            moduleCore.logToFile('ERROR: Cannot get Hwnd property from ListView control')
             if (DEBUG_ENABLED) {
-                moduleCore.logDebug("This suggests a version compatibility issue with AutoHotkey " . A_AhkVersion)
+                moduleCore.logDebug('This suggests a version compatibility issue with AutoHotkey ' . A_AhkVersion)
             }
             return false
         }
         
         ; Validate that it's actually a ListView
-        typeValue := this.GetControlProperty(listView, "Type")
-        if (typeValue && typeValue != "ListView") {
-            moduleCore.logToFile("ERROR: Control is not a ListView, it's a " . typeValue)
+        typeValue := this.GetControlProperty(listView, 'Type')
+        if (typeValue && typeValue != 'ListView') {
+            moduleCore.logToFile('ERROR: Control is not a ListView, it`'s a ' . typeValue)
             return false
         }
 
         try {
-            moduleCore.logDebug("Attempting to create LV_Colors instance with Hwnd: " . hwndValue)
+            moduleCore.logDebug('Attempting to create LV_Colors instance with Hwnd: ' . hwndValue)
 
             ; Create LV_Colors with the ListView control object
             g_lvColors := LV_Colors(listView)
 
             if (DEBUG_ENABLED) {
-                moduleCore.logDebug("LV_Colors constructor completed")
-                moduleCore.logDebug("g_lvColors type: " . Type(g_lvColors))
-                moduleCore.logDebug("g_lvColors is object: " . (IsObject(g_lvColors) ? "YES" : "NO"))
+                moduleCore.logDebug('LV_Colors constructor completed')
+                moduleCore.logDebug('g_lvColors type: ' . Type(g_lvColors))
+                moduleCore.logDebug('g_lvColors is object: ' . (IsObject(g_lvColors) ? 'YES' : 'NO'))
             }
 
             if (!IsObject(g_lvColors)) {
-                moduleCore.logToFile("ERROR: Failed to create LV_Colors instance")
+                moduleCore.logToFile('ERROR: Failed to create LV_Colors instance')
                 return false
             }
 
             ; Enable colors
-            moduleCore.logDebug("Enabling colors with ShowColors(true)...")
+            moduleCore.logDebug('Enabling colors with ShowColors(true)...')
             g_lvColors.ShowColors(true)
 
-            moduleCore.logToFile("✓ ListView colors initialized successfully")
+            moduleCore.logToFile('✓ ListView colors initialized successfully')
             return true
 
         } catch as err {
-            moduleCore.logToFile("CRITICAL ERROR: Exception in LV_Colors creation: " . err.Message)
+            moduleCore.logToFile('CRITICAL ERROR: Exception in LV_Colors creation: ' . err.Message)
             
             if (DEBUG_ENABLED) {
-                moduleCore.logDebug("Detailed error information:")
-                moduleCore.logDebug("  Error message: " . err.Message)
-                moduleCore.logDebug("  Error extra: " . err.Extra)
-                moduleCore.logDebug("  Error line: " . err.Line)
-                moduleCore.logDebug("  Error file: " . err.File)
-                moduleCore.logDebug("  AutoHotkey version: " . A_AhkVersion)
+                moduleCore.logDebug('Detailed error information:')
+                moduleCore.logDebug('  Error message: ' . err.Message)
+                moduleCore.logDebug('  Error extra: ' . err.Extra)
+                moduleCore.logDebug('  Error line: ' . err.Line)
+                moduleCore.logDebug('  Error file: ' . err.File)
+                moduleCore.logDebug('  AutoHotkey version: ' . A_AhkVersion)
             }
             
-            g_lvColors := ""
+            g_lvColors := ''
             return false
         }
     }
 
-    ; Function to apply colors to ListView rows based on conflict status
+    ; New : 25-01-24
+    ; ApplyRowColors : (items) : Apply colors to ListView rows based on conflict status
+    ; items : array - Array of items to color
+    ; Returns : bool - True if any rows colored, False otherwise
     ApplyRowColors(items) {
         ; NMS 1 line added
-        moduleCore.logToFile("============= GuiListView / ApplyRowColors ===============", 'NMS')
+        moduleCore.logToFile('============= GuiListView / ApplyRowColors ===============', 'NMS')
         global g_lvColors
 
-        moduleCore.logToFile("Applying row colors to " . items.Length . " items...")
+        moduleCore.logToFile('Applying row colors to ' . items.Length . ' items...')
         
         if (DEBUG_ENABLED) {
-            moduleCore.logDebug("=== DETAILED ROW COLOR APPLICATION ===")
-            moduleCore.logDebug("g_lvColors type: " . Type(g_lvColors))
-            moduleCore.logDebug("g_lvColors is object: " . (IsObject(g_lvColors) ? "YES" : "NO"))
+            moduleCore.logDebug('=== DETAILED ROW COLOR APPLICATION ===')
+            moduleCore.logDebug('g_lvColors type: ' . Type(g_lvColors))
+            moduleCore.logDebug('g_lvColors is object: ' . (IsObject(g_lvColors) ? 'YES' : 'NO'))
         }
 
         if (!IsObject(g_lvColors)) {
-            moduleCore.logToFile("ERROR: g_lvColors not initialized - cannot apply colors")
+            moduleCore.logToFile('ERROR: g_lvColors not initialized - cannot apply colors')
             return false
         }
 
         if (!items || items.Length = 0) {
-            moduleCore.logToFile("No items to color")
+            moduleCore.logToFile('No items to color')
             return false
         }
 
         ; Use configurable colors from main script
         if (DEBUG_ENABLED) {
-            moduleCore.logDebug("Using configurable colors:")
-            moduleCore.logDebug("  Normal: BG=0x" . Format("{:06X}", NORMAL_BG_COLOR) . ", Text=0x" . Format("{:06X}", NORMAL_TEXT_COLOR))
-            moduleCore.logDebug("  Conflict: BG=0x" . Format("{:06X}", CONFLICT_BG_COLOR) . ", Text=0x" . Format("{:06X}", CONFLICT_TEXT_COLOR))
+            moduleCore.logDebug('Using configurable colors:')
+            moduleCore.logDebug('  Normal: BG=0x' . Format('{:06X}', NORMAL_BG_COLOR) . ', Text=0x' . Format('{:06X}', NORMAL_TEXT_COLOR))
+            moduleCore.logDebug('  Conflict: BG=0x' . Format('{:06X}', CONFLICT_BG_COLOR) . ', Text=0x' . Format('{:06X}', CONFLICT_TEXT_COLOR))
         }
 
         coloredRows := 0
@@ -225,8 +235,8 @@ Class GuiListView {
         for intIndex, objRecord in items {
             ; Check for conflicts
             hasConflict := false
-            if (IsObject(objRecord) && objRecord.HasOwnProp("conflict") && objRecord.conflict) {
-                if (IsObject(objRecord.conflict) && objRecord.conflict.HasOwnProp("isConflict")) {
+            if (IsObject(objRecord) && objRecord.HasOwnProp('conflict') && objRecord.conflict) {
+                if (IsObject(objRecord.conflict) && objRecord.conflict.HasOwnProp('isConflict')) {
                     hasConflict := objRecord.conflict.isConflict
                 }
             }
@@ -239,7 +249,7 @@ Class GuiListView {
                         coloredRows++
                         conflictRows++
                         if (DEBUG_ENABLED && intIndex <= 3) {
-                            moduleCore.logDebug("  ✓ Applied CONFLICT colors to row " . intIndex . " (" . objRecord.command . ")")
+                            moduleCore.logDebug('  ✓ Applied CONFLICT colors to row ' . intIndex . ' (' . objRecord.command . ')')
                         }
                     }
                 } else {
@@ -247,55 +257,57 @@ Class GuiListView {
                     if (success) {
                         coloredRows++
                         if (DEBUG_ENABLED && intIndex <= 3) {
-                            moduleCore.logDebug("  ✓ Applied NORMAL colors to row " . intIndex . " (" . objRecord.command . ")")
+                            moduleCore.logDebug('  ✓ Applied NORMAL colors to row ' . intIndex . ' (' . objRecord.command . ')')
                         }
                     }
                 }
             } catch as err {
-                moduleCore.logToFile("ERROR coloring row " . intIndex . ": " . err.Message)
+                moduleCore.logToFile('ERROR coloring row ' . intIndex . ': ' . err.Message)
             }
         }
 
-        moduleCore.logToFile("✓ Row coloring completed: " . coloredRows . " rows colored (" . conflictRows . " conflicts)")
+        moduleCore.logToFile('✓ Row coloring completed: ' . coloredRows . ' rows colored (' . conflictRows . ' conflicts)')
 
         ; Force redraw
         try {
             global g_mainListView
-            hwndValue := this.GetControlProperty(g_mainListView, "Hwnd")
+            hwndValue := this.GetControlProperty(g_mainListView, 'Hwnd')
             if (hwndValue) {
                 WinRedraw(hwndValue)
-                moduleCore.logDebug("ListView redrawn")
+                moduleCore.logDebug('ListView redrawn')
             }
         } catch as err {
-            moduleCore.logToFile("WARNING: Could not redraw ListView: " . err.Message)
+            moduleCore.logToFile('WARNING: Could not redraw ListView: ' . err.Message)
         }
 
         return coloredRows > 0
     }
 
-    ; Function to populate ListView with hotkey and hotstring data
+    ; New : 25-01-24
+    ; PopulateListView : (listView, items) : Populate ListView with hotkey and hotstring data
+    ; listView : object - ListView control object
+    ; items : array - Array of items to display
     PopulateListView(listView, items) {
-        Peep('items', items)
         ; NMS 1 line added
-        moduleCore.logToFile("============= GuiListView / PopulateListView ===============", 'NMS')
-        moduleCore.logToFile("Populating ListView with " . items.Length . " items...")
+        moduleCore.logToFile('============= GuiListView / PopulateListView ===============', 'NMS')
+        moduleCore.logToFile('Populating ListView with ' . items.Length . ' items...')
         if (DEBUG_ENABLED) {
-            moduleCore.logDebug("=== DETAILED LISTVIEW POPULATION ===")
-            moduleCore.logDebug("ListView parameter type: " . Type(listView))
-            moduleCore.logDebug("Items to process: " . items.Length)
+            moduleCore.logDebug('=== DETAILED LISTVIEW POPULATION ===')
+            moduleCore.logDebug('ListView parameter type: ' . Type(listView))
+            moduleCore.logDebug('Items to process: ' . items.Length)
         }
 
         if (!IsObject(listView)) {
-            moduleCore.logToFile("ERROR: Invalid ListView passed to PopulateListView")
+            moduleCore.logToFile('ERROR: Invalid ListView passed to PopulateListView')
             return
         }
 
         ; Clear existing content
         try {
             listView.Delete()
-            moduleCore.logDebug("ListView content cleared")
+            moduleCore.logDebug('ListView content cleared')
         } catch as err {
-            moduleCore.logToFile("ERROR clearing ListView: " . err.Message)
+            moduleCore.logToFile('ERROR clearing ListView: ' . err.Message)
             return
         }
 
@@ -311,12 +323,12 @@ Class GuiListView {
             ; Determine conflict status
             hasConflict := false
             isExactConflict := false
-            if (IsObject(item) && item.HasOwnProp("conflict") && item.conflict) {
-                if (IsObject(item.conflict) && item.conflict.HasOwnProp("isConflict")) {
+            if (IsObject(item) && item.HasOwnProp('conflict') && item.conflict) {
+                if (IsObject(item.conflict) && item.conflict.HasOwnProp('isConflict')) {
                     hasConflict := item.conflict.isConflict
                     if (hasConflict) {
                         conflictItems++
-                        if (item.conflict.HasOwnProp("isExact")) {
+                        if (item.conflict.HasOwnProp('isExact')) {
                             isExactConflict := item.conflict.isExact
                         }
                     }
@@ -324,32 +336,32 @@ Class GuiListView {
             }
 
             ; Format display text
-            commandText := item.command != "" ? item.command : "[No Command]"
+            commandText := item.command != '' ? item.command : '[No Command]'
             if (hasConflict) {
-                commandText := (isExactConflict ? "🚨 " : "⚠️ ") . commandText
+                commandText := (isExactConflict ? '🚨 ' : '⚠️ ') . commandText
             }
 
-            typeText := item.type = "k" ? "Hotkey" : "Hotstring"
+            typeText := item.type = 'k' ? 'Hotkey' : 'Hotstring'
             if (hasConflict) {
-                typeText .= (isExactConflict ? " (CONFLICT!)" : " (Similar)")
+                typeText .= (isExactConflict ? ' (CONFLICT!)' : ' (Similar)')
             }
 
             ; Build description
-            actualDescription := item.description != "" ? item.description : (item.type = "k" ? "Hotkey action" : "Text replacement")
+            actualDescription := item.description != '' ? item.description : (item.type = 'k' ? 'Hotkey action' : 'Text replacement')
             
-            conflictPrefix := ""
-            if (hasConflict && IsSet(GetConflictStatusText) && Type(GetConflictStatusText) = "Func") {
+            conflictPrefix := ''
+            if (hasConflict && IsSet(GetConflictStatusText) && Type(GetConflictStatusText) = 'Func') {
                 conflictDetails := GetConflictStatusText(item.conflict)
-                conflictPrefix := (isExactConflict ? "🚨 EXACT CONFLICT " : "⚠️ POTENTIAL CONFLICT ") . conflictDetails . " → "
+                conflictPrefix := (isExactConflict ? '🚨 EXACT CONFLICT ' : '⚠️ POTENTIAL CONFLICT ') . conflictDetails . ' → '
             }
 
             ; Add source indicator
-            sourceIndicator := ""
-            if (item.HasOwnProp("source")) {
+            sourceIndicator := ''
+            if (item.HasOwnProp('source')) {
                 sourceType := item.source
-                sourceIndicator := sourceType = "direct code" || sourceType = "direct" ? " [✓]" :
-                                sourceType = "settings.ini" ? " [⚙]" :
-                                InStr(sourceType, "Triggers") ? " [⚠]" : " [" . sourceType . "]"
+                sourceIndicator := sourceType = 'direct code' || sourceType = 'direct' ? ' [✓]' :
+                                sourceType = 'settings.ini' ? ' [⚙]' :
+                                InStr(sourceType, 'Triggers') ? ' [⚡]' : ' [' . sourceType . ']'
             }
 
             finalDescription := conflictPrefix . actualDescription . sourceIndicator
@@ -361,8 +373,8 @@ Class GuiListView {
             ; if (item.hwnd) {
             ;     try {
             ;         DetectHiddenWindows(true)
-            ;         scriptPath := WinGetTitle("ahk_id " . item.hwnd)
-            ;         scriptPath := RegExReplace(scriptPath, "\s+-\s+AutoHotkey.*$")
+            ;         scriptPath := WinGetTitle('ahk_id ' . item.hwnd)
+            ;         scriptPath := RegExReplace(scriptPath, '\s+-\s+AutoHotkey.*$')
             ;     } catch {
             ;         ; Ignore path errors
             ;     }
@@ -371,19 +383,19 @@ Class GuiListView {
 
             ; Add row to ListView
             try {
-                rowIndex := listView.Add("", commandText, typeText, finalDescription, item.file, item.line, scriptPath)
+                rowIndex := listView.Add('', commandText, typeText, finalDescription, item.file, item.line, scriptPath)
                 itemsAdded++
                 
                 if (DEBUG_ENABLED && index <= 3) {
-                    moduleCore.logDebug("Added row " . rowIndex . ": " . item.command . " (conflict=" . hasConflict . ")")
+                    moduleCore.logDebug('Added row ' . rowIndex . ': ' . item.command . ' (conflict=' . hasConflict . ')')
                 }
             } catch as err {
-                moduleCore.logToFile("ERROR adding row " . index . ": " . err.Message)
+                moduleCore.logToFile('ERROR adding row ' . index . ': ' . err.Message)
             }
         }
         listView.opt('+Redraw') ;; hud
 
-        moduleCore.logToFile("✓ ListView populated: " . itemsAdded . "/" . items.Length . " items (" . conflictItems . " conflicts)")
+        moduleCore.logToFile('✓ ListView populated: ' . itemsAdded . '/' . items.Length . ' items (' . conflictItems . ' conflicts)')
     }
 }
 ;================= End of GuiListView =================

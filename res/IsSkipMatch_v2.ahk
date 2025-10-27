@@ -12,7 +12,7 @@ skipScripts := StrSplit(FileRead('Skip_Scripts.ini'), ',')
 arraySkipScriptList := []
 Loop skipScripts.Length
     if !InStr(skipScripts[A_Index], ';')
-        arraySkipScriptList.Push(skipScripts[A_Index])
+        arraySkipScriptList.Push(SubStr(skipScripts[A_Index],2))
 
 Class IsSkipMatch {
     ; This class provides a method to check if a script should be skipped based on
@@ -20,19 +20,23 @@ Class IsSkipMatch {
 
     ; This function can be integrated directly into ScriptScanner.ahk
 
-    ; Enhanced function to check if a script should be skipped
-    ; Uses exact matching for both filenames and paths
+    ; New : 25-01-24
+    ; IsSkipMatch : (scriptName, scriptPath, arraySkipList) : Check if a script should be skipped
+    ; scriptName : string - Name of the script file
+    ; scriptPath : string - Full path to the script file
+    ; arraySkipList : array - Array of script names/paths to skip
+    ; Returns : object - Object with result (bool), reason (string), and matchType (string)
     IsSkipMatch(scriptName, scriptPath, arraySkipList) {
         ; First check exact filename matches
         for skipItem in arraySkipList {
             ; Check if the skip item is a full path
-            if (InStr(skipItem, "\")) {
+            if (InStr(skipItem, '\')) {
                 ; Compare full paths for exact match
                 if (scriptPath = skipItem) {
                     return {
                         result: true,
-                        reason: "Exact path match: " skipItem,
-                        matchType: "path"
+                        reason: 'Exact path match: ' skipItem,
+                        matchType: 'path'
                     }
                 }
             }
@@ -40,8 +44,8 @@ Class IsSkipMatch {
             else if (scriptName = skipItem) {
                 return {
                     result: true,
-                    reason: "Exact filename match: " skipItem,
-                    matchType: "filename"
+                    reason: 'Exact filename match: ' skipItem,
+                    matchType: 'filename'
                 }
             }
         }
@@ -49,8 +53,8 @@ Class IsSkipMatch {
         ; If we reach here, script should not be skipped
         return {
             result: false,
-            reason: "No match found in skip list",
-            matchType: "none"
+            reason: 'No match found in skip list',
+            matchType: 'none'
         }
     }
 
@@ -59,7 +63,7 @@ Class IsSkipMatch {
     ;
     ; matchResult := IsSkipMatch(scriptName, scriptPath, arraySkipScriptList)
     ; if (matchResult.result) {
-    ;     logToFile("  SKIPPING: " matchResult.reason)
+    ;     logToFile('  SKIPPING: ' matchResult.reason)
     ;     continue
     ; }
 }

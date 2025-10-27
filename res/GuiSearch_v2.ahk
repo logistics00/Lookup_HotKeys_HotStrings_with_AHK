@@ -30,10 +30,11 @@ global g_lvColors
 DEBUG_ENABLED := IniRead('Lookup.ini', 'Debug', 'DEBUG_ENABLED')
 
 Class GuiSearch {
-    ; Handle search box changes
+    ; New : 25-01-24
+    ; OnSearchChange : () : Handle search box changes
     OnSearchChange() {
         ; NMS 1 line added
-        moduleCore.logToFile("============= GuiSearch / OnSearchChange ===============", 'NMS')
+        moduleCore.logToFile('============= GuiSearch / OnSearchChange ===============', 'NMS')
         global g_searchEdit, g_searchText
 
         ; Get current value
@@ -41,7 +42,7 @@ Class GuiSearch {
 
         ; Update global and log
         g_searchText := currentValue
-        moduleCore.logDebug("Search text changed: '" . currentValue . "'")
+        moduleCore.logDebug('Search text changed: ' . currentValue)
 
         ; Delay filter application to avoid too frequent updates
         ; NMS Changed next 3 lines
@@ -50,25 +51,27 @@ Class GuiSearch {
         this.ApplyFilters()
     }
 
-    ; Search button handler
+    ; New : 25-01-24
+    ; SearchNow : () : Search button handler
     SearchNow() {
         ; NMS 1 line added
-        moduleCore.logToFile("============= GuiSearch / SearchNow ===============", 'NMS')
+        moduleCore.logToFile('============= GuiSearch / SearchNow ===============', 'NMS')
         global g_searchEdit, g_searchText
 
         ; Get and log the current value
         currentValue := g_searchEdit.Value
         g_searchText := currentValue
-        moduleCore.logToFile("Search initiated: '" . currentValue . "'")
+        moduleCore.logToFile('Search initiated: ' . currentValue)
 
         ; Apply filters immediately
         this.ApplyFilters()
     }
 
-    ; Apply all filters to the ListView with color reapplication
+    ; New : 25-01-24
+    ; ApplyFilters : () : Apply all filters to the ListView with color reapplication
     ApplyFilters() {
         ; NMS 1 line added
-        moduleCore.logToFile("============= GuiSearch / ApplyFilters ===============", 'NMS')
+        moduleCore.logToFile('============= GuiSearch / ApplyFilters ===============', 'NMS')
         global g_searchText, g_typeDropDown, g_fileDropDown, g_mainListView, arrayBaseList, g_mainGui, objScript, g_lvColors
 
         ; Get filter values
@@ -76,28 +79,28 @@ Class GuiSearch {
         typeFilter := g_typeDropDown.Text
         fileFilter := g_fileDropDown.Text
 
-        moduleCore.logToFile("Applying filters: search='" . searchText . "', type='" . typeFilter . "', file='" . fileFilter . "'")
+        moduleCore.logToFile('Applying filters: search=' . searchText . ', type=' . typeFilter . ', file=' . fileFilter)
 
         if (DEBUG_ENABLED) {
-            moduleCore.logDebug("=== DETAILED FILTER APPLICATION ===")
-            moduleCore.logDebug("Search text: '" . searchText . "'")
-            moduleCore.logDebug("Type filter: '" . typeFilter . "'")
-            moduleCore.logDebug("File filter: '" . fileFilter . "'")
-            moduleCore.logDebug("Total items to filter: " . arrayBaseList.Length)
+            moduleCore.logDebug('=== DETAILED FILTER APPLICATION ===')
+            moduleCore.logDebug('Search text: ' . searchText)
+            moduleCore.logDebug('Type filter: ' . typeFilter)
+            moduleCore.logDebug('File filter: ' . fileFilter)
+            moduleCore.logDebug('Total items to filter: ' . arrayBaseList.Length)
         }
 
         ; Check ListView before attempting operations
         if (!IsObject(g_mainListView)) {
-            moduleCore.logToFile("ERROR: g_mainListView is not a valid object in ApplyFilters")
+            moduleCore.logToFile('ERROR: g_mainListView is not a valid object in ApplyFilters')
             return
         }
 
         ; Clear ListView
         try {
             g_mainListView.Delete()
-            moduleCore.logDebug("Cleared ListView for filtering")
+            moduleCore.logDebug('Cleared ListView for filtering')
         } catch as err {
-            moduleCore.logToFile("ERROR clearing ListView: " . err.Message)
+            moduleCore.logToFile('ERROR clearing ListView: ' . err.Message)
             return
         }
 
@@ -105,9 +108,9 @@ Class GuiSearch {
         if (IsObject(g_lvColors)) {
             try {
                 g_lvColors.Clear()
-                moduleCore.logDebug("Cleared existing colors before filtering")
+                moduleCore.logDebug('Cleared existing colors before filtering')
             } catch as err {
-                moduleCore.logToFile("WARNING: Could not clear existing colors: " . err.Message)
+                moduleCore.logToFile('WARNING: Could not clear existing colors: ' . err.Message)
             }
         }
 
@@ -117,10 +120,10 @@ Class GuiSearch {
         hotstringCount := 0
 
         ; Build search pattern if needed
-        searchPattern := searchText ? "i)\Q" . searchText . "\E" : ""
+        searchPattern := searchText ? 'i)\Q' . searchText . '\E' : ''
 
         if (DEBUG_ENABLED) {
-            moduleCore.logDebug("Search pattern: '" . searchPattern . "'")
+            moduleCore.logDebug('Search pattern: ' . searchPattern)
         }
 
         ; Filter items
@@ -131,18 +134,18 @@ Class GuiSearch {
                             item.description ~= searchPattern ||
                             item.file ~= searchPattern
 
-            matchesType := typeFilter = "All" ||
-                        (typeFilter = "Hotkeys" && item.type = "k") ||
-                        (typeFilter = "Hotstrings" && item.type = "s")
+            matchesType := typeFilter = 'All' ||
+                        (typeFilter = 'Hotkeys' && item.type = 'k') ||
+                        (typeFilter = 'Hotstrings' && item.type = 's')
 
-            matchesFile := fileFilter = "All" || item.file = fileFilter
+            matchesFile := fileFilter = 'All' || item.file = fileFilter
 
             ; Add to filtered list if matches all criteria
             if (matchesSearch && matchesType && matchesFile) {
                 filteredItems.Push(item)
 
                 ; Track counts
-                if (item.type = "k")
+                if (item.type = 'k')
                     hotkeyCount++
                 else
                     hotstringCount++
@@ -150,45 +153,45 @@ Class GuiSearch {
         }
 
         if (DEBUG_ENABLED) {
-            moduleCore.logDebug("Filtering results:")
-            moduleCore.logDebug("  Items matching search: " . filteredItems.Length)
-            moduleCore.logDebug("  Hotkeys: " . hotkeyCount)
-            moduleCore.logDebug("  Hotstrings: " . hotstringCount)
+            moduleCore.logDebug('Filtering results:')
+            moduleCore.logDebug('  Items matching search: ' . filteredItems.Length)
+            moduleCore.logDebug('  Hotkeys: ' . hotkeyCount)
+            moduleCore.logDebug('  Hotstrings: ' . hotstringCount)
         }
 
         ; Update ListView with filtered items (no coloring yet)
         listViewGui.PopulateListView(g_mainListView, filteredItems)
-        moduleCore.logToFile("✓ ListView updated with " . filteredItems.Length . " filtered items")
+        moduleCore.logToFile('✓ ListView updated with ' . filteredItems.Length . ' filtered items')
 
         ; CRITICAL: Reapply colors to the filtered items
         if (IsObject(g_lvColors) && filteredItems.Length > 0) {
             if (listViewGui.ApplyRowColors(filteredItems)) {
-                moduleCore.logToFile("✓ Colors reapplied to " . filteredItems.Length . " filtered items")
+                moduleCore.logToFile('✓ Colors reapplied to ' . filteredItems.Length . ' filtered items')
                 if (DEBUG_ENABLED) {
-                    moduleCore.logDebug("Row colors successfully reapplied after filtering")
+                    moduleCore.logDebug('Row colors successfully reapplied after filtering')
                 }
             } else {
-                moduleCore.logToFile("WARNING: Failed to reapply colors to filtered items")
+                moduleCore.logToFile('WARNING: Failed to reapply colors to filtered items')
             }
         } else if (filteredItems.Length = 0) {
-            moduleCore.logDebug("No items to color after filtering")
+            moduleCore.logDebug('No items to color after filtering')
         } else {
-            moduleCore.logToFile("WARNING: g_lvColors not available for color application")
+            moduleCore.logToFile('WARNING: g_lvColors not available for color application')
         }
 
         ; Update status
         if (IsObject(g_mainGui)) {
             try {
-                g_mainGui.Title := objScript.name . " - Found: " . filteredItems.Length . " items (" . hotkeyCount . " hotkeys, " . hotstringCount . " hotstrings)"
-                moduleCore.logDebug("Updated GUI title with filter results")
+                g_mainGui.Title := objScript.name . ' - Found: ' . filteredItems.Length . ' items (' . hotkeyCount . ' hotkeys, ' . hotstringCount . ' hotstrings)'
+                moduleCore.logDebug('Updated GUI title with filter results')
             } catch as err {
-                moduleCore.logToFile("ERROR updating GUI title: " . err.Message)
+                moduleCore.logToFile('ERROR updating GUI title: ' . err.Message)
             }
         } else {
-            moduleCore.logToFile("ERROR: g_mainGui is not a valid object when updating title")
+            moduleCore.logToFile('ERROR: g_mainGui is not a valid object when updating title')
         }
 
-        moduleCore.logToFile("✓ Filter application completed")
+        moduleCore.logToFile('✓ Filter application completed')
     }
 }
 ;================= End of GuiSearch =================

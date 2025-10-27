@@ -19,51 +19,54 @@ global mapScriptList
 ; mapScriptList
 
 Class TriggerIniScanner {
-    ; Scans a script for references to the Triggers class and then checks
-    ; for and processes the associated settings.ini file
+    ; New : 25-01-24
+    ; ScanTriggersIni : (scriptInfo, scriptContents) : Scans a script for Triggers class references and processes settings.ini
+    ; scriptInfo : object - Object with scriptName, scriptPath, scriptDir, and hwnd
+    ; scriptContents : string - Contents of the script file
+    ; Returns : object - Statistics object with triggersFound, iniFound, counts, etc.
     ScanTriggersIni(scriptInfo, scriptContents) {
         ; NMS 1 line added
-        moduleCore.logToFile("============= TriggersIniScanner / ScanTriggersIni ===============", 'NMS')
-        moduleCore.logToFile("Scanning for Triggers class usage in: " scriptInfo.scriptName)
+        moduleCore.logToFile('============= TriggersIniScanner / ScanTriggersIni ===============', 'NMS')
+        moduleCore.logToFile('Scanning for Triggers class usage in: ' scriptInfo.scriptName)
 
         ; Initialize return statistics
         stats := {
             triggersFound: false,
             iniFound: false,
-            iniPath: "",
+            iniPath: '',
             hotkeysAdded: 0,
             hotstringsAdded: 0,
             mouseTriggersAdded: 0
         }
 
         ; Check if script uses Triggers class (case insensitive)
-        if (!RegExMatch(scriptContents, "i)Triggers\.(Add|AddHotkey|AddMouse|AddHotstring)")) {
-            moduleCore.logToFile("  No Triggers class usage detected")
+        if (!RegExMatch(scriptContents, 'i)Triggers\.(Add|AddHotkey|AddMouse|AddHotstring)')) {
+            moduleCore.logToFile('  No Triggers class usage detected')
             return stats
         }
 
         ; Found Triggers class usage
         stats.triggersFound := true
-        moduleCore.logToFile("  Triggers class usage detected")
+        moduleCore.logToFile('  Triggers class usage detected')
 
         ; Extract all Triggers.Add* function calls to get function names
         triggerCalls := []
-        for lineNum, line in StrSplit(scriptContents, "`n", "`r") {
+        for lineNum, line in StrSplit(scriptContents, '`n', '`r') {
             ; Skip comments and empty lines
-            if (!line || RegExMatch(line, "^\s*;.*?$"))
+            if (!line || RegExMatch(line, '^\s*;.*?$'))
                 continue
 
             ; Look for Triggers.Add* calls
-            if (RegExMatch(line, "i)Triggers\.(Add|AddHotkey|AddMouse|AddHotstring)", &matchType)) {
-                type := StrLower(matchType[1] || "Add")  ; Normalize type name
+            if (RegExMatch(line, 'i)Triggers\.(Add|AddHotkey|AddMouse|AddHotstring)', &matchType)) {
+                type := StrLower(matchType[1] || 'Add')  ; Normalize type name
 
                 ; Extract the function name using simple regex
-                funcName := ""
-                if (RegExMatch(line, "i)Triggers\.[^(]+\(\s*(\w+)", &funcMatch))
+                funcName := ''
+                if (RegExMatch(line, 'i)Triggers\.[^(]+\(\s*(\w+)', &funcMatch))
                     funcName := funcMatch[1]
 
                 if (funcName) {
-                    moduleCore.logToFile("  Found Triggers." type " call: " funcName " at line " lineNum)
+                    moduleCore.logToFile('  Found Triggers.' type ' call: ' funcName ' at line ' lineNum)
                     triggerCalls.Push({
                         type: type,
                         funcName: funcName,
@@ -73,47 +76,47 @@ Class TriggerIniScanner {
             }
         }
 
-        moduleCore.logToFile("  Found " triggerCalls.Length " Triggers calls in script")
+        moduleCore.logToFile('  Found ' triggerCalls.Length ' Triggers calls in script')
 
         ; If no Triggers calls found, return early
         if (triggerCalls.Length = 0) {
-            moduleCore.logToFile("  No valid Triggers function calls found despite usage")
+            moduleCore.logToFile('  No valid Triggers function calls found despite usage')
             return stats
         }
 
         ; Look for settings.ini in script directory
-        iniPath := scriptInfo.scriptDir "\settings.ini"
+        iniPath := scriptInfo.scriptDir '\settings.ini'
 
         if (!FileExist(iniPath)) {
-            moduleCore.logToFile("  settings.ini not found at: " iniPath)
+            moduleCore.logToFile('  settings.ini not found at: ' iniPath)
 
             ; Since no INI file found, report all Triggers calls as direct hotkeys
             for call in triggerCalls {
-                moduleCore.logToFile("  Adding Triggers." call.type " call for " call.funcName " as direct hotkey (no INI)")
+                moduleCore.logToFile('  Adding Triggers.' call.type ' call for ' call.funcName ' as direct hotkey (no INI)')
 
                 ; Add to the global array with a note about missing INI
                 mapScriptList[scriptInfo.scriptName] := true
 
                 ; Determine type based on the call type
-                typeChar := "k"  ; Default to hotkey
-                if (call.type = "AddHotstring")
-                    typeChar := "s"
+                typeChar := 'k'  ; Default to hotkey
+                if (call.type = 'addhotstring')
+                    typeChar := 's'
 
                 arrayBaseList.Push({
                     command: call.funcName,
-                    description: "Triggers." call.type " call with no settings.ini",
+                    description: 'Triggers.' call.type ' call with no settings.ini',
                     file: scriptInfo.scriptName,
                     line: call.line,
                     type: typeChar,
                     hwnd: scriptInfo.hwnd,
                     status: true,
-                    source: "Triggers (no INI)"
+                    source: 'Triggers (no INI)'
                 })
 
                 ; Update stats
-                if (call.type = "AddHotstring")
+                if (call.type = 'addhotstring')
                     stats.hotstringsAdded++
-                else if (call.type = "AddMouse")
+                else if (call.type = 'addmouse')
                     stats.mouseTriggersAdded++
                 else
                     stats.hotkeysAdded++
@@ -124,15 +127,15 @@ Class TriggerIniScanner {
 
         stats.iniFound := true
         stats.iniPath := iniPath
-        moduleCore.logToFile("  Found settings.ini at: " iniPath)
+        moduleCore.logToFile('  Found settings.ini at: ' iniPath)
 
         ; Process the ini file to extract hotkeys
         try {
             ; Read all hotkeys from the ini file
-            hotkeySection := IniRead(iniPath, "Hotkeys")
+            hotkeySection := IniRead(iniPath, 'Hotkeys')
 
-            if (hotkeySection = "") {
-                moduleCore.logToFile("  No hotkeys found in settings.ini")
+            if (hotkeySection = '') {
+                moduleCore.logToFile('  No hotkeys found in settings.ini')
                 return stats
             }
 
@@ -140,12 +143,12 @@ Class TriggerIniScanner {
             iniMappedFuncs := Map()
 
             ; Process each line in the Hotkeys section
-            for i, line in StrSplit(hotkeySection, "`n", "`r") {
-                if (RegExMatch(line, "(.*)=(.*)", &r)) {
+            for i, line in StrSplit(hotkeySection, '`n', '`r') {
+                if (RegExMatch(line, '(.*)=(.*)', &r)) {
                     funcName := r[1]
                     hotkeyDef := r[2]
 
-                    if (hotkeyDef = "") {
+                    if (hotkeyDef = '') {
                         continue
                     }
 
@@ -153,21 +156,21 @@ Class TriggerIniScanner {
                     iniMappedFuncs[funcName] := hotkeyDef
 
                     ; Get label and type from ini
-                    label := IniRead(iniPath, "Label", funcName, funcName)
-                    type := IniRead(iniPath, "Dropdown", funcName, "2") ; Default to hotkey
-                    title := IniRead(iniPath, "Title", funcName, "")
+                    label := IniRead(iniPath, 'Label', funcName, funcName)
+                    type := IniRead(iniPath, 'Dropdown', funcName, '2') ; Default to hotkey
+                    title := IniRead(iniPath, 'Title', funcName, '')
 
                     ; Determine type text for display
-                    typeText := "k" ; Default to hotkey
+                    typeText := 'k' ; Default to hotkey
 
-                    if (type = "1") {
-                        typeText := "k" ; Mouse trigger is still a hotkey type
+                    if (type = '1') {
+                        typeText := 'k' ; Mouse trigger is still a hotkey type
                         stats.mouseTriggersAdded++
-                    } else if (type = "2") {
-                        typeText := "k"
+                    } else if (type = '2') {
+                        typeText := 'k'
                         stats.hotkeysAdded++
-                    } else if (type = "3") {
-                        typeText := "s"
+                    } else if (type = '3') {
+                        typeText := 's'
                         stats.hotstringsAdded++
                     }
 
@@ -177,9 +180,9 @@ Class TriggerIniScanner {
                     ; Format the description with the label and function name
                     description := label
                     if (title) {
-                        description .= " - " title
+                        description .= ' - ' title
                     }
-                    description .= " (" funcName ")"
+                    description .= ' (' funcName ')'
 
                     ; Add to global array with settings.ini hotkey identifier
                     arrayBaseList.Push({
@@ -190,48 +193,48 @@ Class TriggerIniScanner {
                         type: typeText,
                         hwnd: scriptInfo.hwnd,
                         status: true,
-                        source: "settings.ini"
+                        source: 'settings.ini'
                     })
 
-                    moduleCore.logToFile("  Added from settings.ini: " (typeText = "k" ? "Hotkey" : "Hotstring") " - " hotkeyDef " - " description)
+                    moduleCore.logToFile('  Added from settings.ini: ' (typeText = 'k' ? 'Hotkey' : 'Hotstring') ' - ' hotkeyDef ' - ' description)
                 }
             }
 
             ; Now check for Triggers calls not in the INI and add them too
             for call in triggerCalls {
                 if (!iniMappedFuncs.Has(call.funcName)) {
-                    moduleCore.logToFile("  Adding Triggers." call.type " call for " call.funcName " not found in INI")
+                    moduleCore.logToFile('  Adding Triggers.' call.type ' call for ' call.funcName ' not found in INI')
 
                     ; Add to the global array
                     mapScriptList[scriptInfo.scriptName] := true
 
                     ; Determine type based on the call type
-                    typeChar := "k"  ; Default to hotkey
-                    if (call.type = "AddHotstring")
-                        typeChar := "s"
+                    typeChar := 'k'  ; Default to hotkey
+                    if (call.type = 'addhotstring')
+                        typeChar := 's'
 
                     arrayBaseList.Push({
                         command: call.funcName,
-                        description: "Triggers." call.type " call (not in settings.ini)",
+                        description: 'Triggers.' call.type ' call (not in settings.ini)',
                         file: scriptInfo.scriptName,
                         line: call.line,
                         type: typeChar,
                         hwnd: scriptInfo.hwnd,
                         status: true,
-                        source: "Triggers (not in INI)"
+                        source: 'Triggers (not in INI)'
                     })
 
                     ; Update stats
-                    if (call.type = "AddHotstring")
+                    if (call.type = 'addhotstring')
                         stats.hotstringsAdded++
-                    else if (call.type = "AddMouse")
+                    else if (call.type = 'addmouse')
                         stats.mouseTriggersAdded++
                     else
                         stats.hotkeysAdded++
                 }
             }
         } catch as err {
-            moduleCore.logToFile("  ERROR processing settings.ini: " err.Message)
+            moduleCore.logToFile('  ERROR processing settings.ini: ' err.Message)
         }
 
         ; Return stats

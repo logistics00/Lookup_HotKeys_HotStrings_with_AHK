@@ -9,5 +9,7 @@
 
 moduleCore := CoreModule()
 
+; New : 25-01-24
+; Main entry point - initializes the application
 moduleCore.InitApp()
 ;================= End of Lookup =================
