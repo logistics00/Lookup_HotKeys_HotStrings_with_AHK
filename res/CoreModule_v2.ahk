@@ -11,8 +11,6 @@ coreGui := GuiCore()
 #Include ScriptScanner_v2.ahk
 scannerScript := ScriptScanner()
 
-logEnabled := IniRead('Lookup.ini', 'Log', 'log')
-
 ; Global variables, constants, and configuration
 global objScript := {name: "AHKHotkeyStringLookup", version: "1.0.0"}
 global mapScriptList := Map()
@@ -34,9 +32,7 @@ global g_searchListView := "" ; Search results ListView
 global g_contextMenu := ""   ; Context menu for ListView
 global g_lvColors := ""      ; LV_Colors instance for ListView row coloring
 
-; NMS Next line commented because of Lookup,ini
-; global DEBUG_ENABLED
-; NMS Next 6 lines added because of Lookup,ini
+; NMS Next 6 lines added
 DEBUG_ENABLED := IniRead('Lookup.ini', 'Debug', 'DEBUG_ENABLED')
 ; Declare global color configuration variables (set in main script)
 NORMAL_BG_COLOR := IniRead('Lookup.ini', 'ListView', 'NORMAL_BG_COLOR')
@@ -44,9 +40,14 @@ NORMAL_TEXT_COLOR := IniRead('Lookup.ini', 'ListView', 'NORMAL_TEXT_COLOR')
 CONFLICT_BG_COLOR := IniRead('Lookup.ini', 'ListView', 'CONFLICT_BG_COLOR')
 CONFLICT_TEXT_COLOR := IniRead('Lookup.ini', 'ListView', 'CONFLICT_TEXT_COLOR')
 
+logEnabled := IniRead('Lookup.ini', 'Log', 'log')
+
 Class CoreModule {
     ; Main execution entry point that should be called from main script
     InitApp() {
+        ; NMS 1 line added
+
+        this.logToFile("========== CoreModule / InitApp ==========", 'NMS_Start')
         ; Show debug status at startup
         if (DEBUG_ENABLED) {
             MsgBox("Debug mode is enabled.")
@@ -67,6 +68,8 @@ Class CoreModule {
 
     ; Initialization function - loads scripts and creates the GUI
     initializeApp() {
+        ; NMS 1 line added
+        this.logToFile("========== CoreModule / initializeApp ==========", 'NMS')
         this.logToFile("========== Application Started ==========")
         this.logToFile("Version: " objScript.version)
 
@@ -129,17 +132,35 @@ Class CoreModule {
     ; Enhanced logging function with debug levels
     logToFile(text, append := true, debugLevel := "INFO") {
         static logFile := A_ScriptDir "\AHKHotkeyScanner.log"
+        ; NMS Next 3 lines added
+        static nmsFile := A_ScriptDir "\NMS_LogFile.log"
+        if !logEnabled
+            return
         ; Skip debug messages if debug not enabled (except for errors)
         if (!DEBUG_ENABLED && debugLevel = "DEBUG") {
             return
         }
 
-        ; Format the timestamp
-        timestamp := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
-        
-        ; Add debug level prefix for debug messages
-        levelPrefix := DEBUG_ENABLED && debugLevel = "DEBUG" ? "[DEBUG] " : ""
-        logText := "[" timestamp "] " levelPrefix text
+        ; NMS Next 19 lines added
+        if append = 'NMS_Start' {
+            FileDelete(nmsFile)
+            FileDelete(logFile)
+            logText := text
+            FileAppend(logText "`n", nmsFile)
+            append := true
+        } else if append = 'NMS' {
+            logText := text
+            FileAppend(logText "`n", nmsFile)
+            append := true
+        } else {
+
+            ; Format the timestamp
+            timestamp := FormatTime(A_Now, "yyyy-MM-dd HH:mm:ss")
+            
+            ; Add debug level prefix for debug messages
+            levelPrefix := DEBUG_ENABLED && debugLevel = "DEBUG" ? "[DEBUG] " : ""
+            logText := "[" timestamp "] " levelPrefix text
+        }
 
         if (append) {
             try {
@@ -213,8 +234,21 @@ Class CoreModule {
         return result
     }
 
-    ; NMS Made a function because in Class no HotKey allowed
+    ; ; Function to perform Select All and Copy using Windows shortcuts
+    ; selectAllAndCopy() {
+    ;     ; Send Ctrl+A to select all
+    ;     Send "^a"
+    ;     ; Short delay to ensure selection is complete
+    ;     Sleep 50
+    ;     ; Send Ctrl+C to copy
+    ;     Send "^c"
+    ;     ; Display notification
+    ;     this.logToFile("Hotkey triggered: Ctrl+Alt+A (Select All and Copy)")
+    ; }
+
     HotKeyInClass() {
+        ; NMS 1 line added
+        this.logToFile("========== CoreModule / HotkeyInClass ==========", 'NMS')
         HotKey('!a', selectAllAndCopy)
 
         selectAllAndCopy() {
@@ -229,5 +263,22 @@ Class CoreModule {
             this.logToFile("Hotkey triggered: Ctrl+Alt+A (Select All and Copy)")
         }
     }
+
+    myFileDelete(fileName) { ;; hud
+        global myFile
+        if (myFile = 0) {
+            myFile := FileOpen(fileName, "w")
+        }
+    }
+
+    myFileAppend(text, fileName) { ;; hud
+        global myFile
+        if (myFile = 0)
+            this.myFileDelete(fileName)
+        myFile.write(text)
+    }
+
+
+
 }
 ;================= End of CoreModule =================

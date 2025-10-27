@@ -16,18 +16,11 @@ moduleCore := CoreModule()
 ; Declare global variables used from other modules
 global g_mainListView
 global g_lvColors
-
-; NMS Next 3 lines commented because of Class concept
+; NMS Next 4 lines commented
+; global moduleCore.logToFile
+; global moduleCore.logDebug
 ; global GetConflictStatusText
-; global logToFile
-; global logDebug
-
-; NMS Next  lines commented  because of Lookup.ini
 ; global DEBUG_ENABLED
-; global NORMAL_BG_COLOR
-; global NORMAL_TEXT_COLOR
-; global CONFLICT_BG_COLOR
-; global CONFLICT_TEXT_COLOR
 
 ; NMS Next 6 lines added
 DEBUG_ENABLED := IniRead('Lookup.ini', 'Debug', 'DEBUG_ENABLED')
@@ -45,6 +38,8 @@ if (!IsSet(g_lvColors)) {
 Class GuiListView {
     ; Function to safely get control properties with multiple methods
     GetControlProperty(control, propertyName) {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= GuiListView / GetControlProperty ===============", 'NMS')
         if (!IsObject(control)) {
             return ""
         }
@@ -94,6 +89,8 @@ Class GuiListView {
 
     ; Function to create and initialize LV_Colors for the ListView
     InitializeListViewColors(listView) {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= GuiListView / InitializeListViewColors ===============", 'NMS')
         global g_lvColors
 
         ; Always log the basic initialization
@@ -192,6 +189,8 @@ Class GuiListView {
 
     ; Function to apply colors to ListView rows based on conflict status
     ApplyRowColors(items) {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= GuiListView / ApplyRowColors ===============", 'NMS')
         global g_lvColors
 
         moduleCore.logToFile("Applying row colors to " . items.Length . " items...")
@@ -276,6 +275,9 @@ Class GuiListView {
 
     ; Function to populate ListView with hotkey and hotstring data
     PopulateListView(listView, items) {
+        Peep('items', items)
+        ; NMS 1 line added
+        moduleCore.logToFile("============= GuiListView / PopulateListView ===============", 'NMS')
         moduleCore.logToFile("Populating ListView with " . items.Length . " items...")
         if (DEBUG_ENABLED) {
             moduleCore.logDebug("=== DETAILED LISTVIEW POPULATION ===")
@@ -353,7 +355,7 @@ Class GuiListView {
             finalDescription := conflictPrefix . actualDescription . sourceIndicator
 
             ; NMS 1 line added for displaying scriptPath at final window
-            scriptPath := item.path
+            scriptPath := StrReplace(item.path, 'D:\OneDrive\AutoHotkey\AHK_')
 
             ; NMS 10 lines commented because foregoing line already takes care of scriptPath
             ; if (item.hwnd) {

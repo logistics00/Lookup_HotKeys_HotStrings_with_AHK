@@ -9,11 +9,9 @@
 moduleCore := CoreModule()
 
 ; Explicitly declare global functions and variables used from other modules
-
-; NMS Next two Lines commented because of Class concept
-; global logToFile
+; NMS Next two Lines commented
+; global moduleCore.logToFile
 ; global logMsgBox
-
 global objScript
 global g_mainListView
 global g_contextMenu
@@ -21,6 +19,8 @@ global g_contextMenu
 Class GuiContextMenu {
     ; Initialize the context menu with options
     InitializeContextMenu() {
+        ; NMS 1 line added
+        moduleCore.logToFile(" ============= GuiContextMenu / InitializeContextMenu ===============", 'NMS')
         global g_contextMenu
 
         ; Create context menu for ListView
@@ -32,6 +32,8 @@ Class GuiContextMenu {
 
     ; Handle ListView context menu
     OnListViewContextMenu(ctrl, itemPos, *) {
+        ; NMS 1 line added
+        moduleCore.logToFile(" ============= GuiContextMenu / OnListViewContextMenu ===============", 'NMS')
         global g_mainListView, g_contextMenu
 
         ; Check that we have valid objects
@@ -71,6 +73,8 @@ Class GuiContextMenu {
 
     ; Menu handlers
     OnMenuEditScript(*) {
+        ; NMS 1 line added
+        moduleCore.logToFile(" ============= GuiContextMenu / OnMenuEditScript ===============", 'NMS')
         global g_mainListView
 
         if (!IsObject(g_mainListView)) {

@@ -26,12 +26,9 @@ shortcutsWindows := WindowsShortcuts()
 ; #Include GuiListView.ahk2
 
 ; Explicitly declare global functions and variables used from other modules
-
-; NMS Next 3 lines commented because of Class concepr
-; global logToFile
-; global logDebug
+; global moduleCore.logToFile
+; global moduleCore.logDebug
 ; global logMsgBox
-
 global objScript
 global mapScriptList
 global arrayBaseList
@@ -42,18 +39,16 @@ global g_typeDropDown
 global g_fileDropDown
 global g_mainListView
 global g_contextMenu
-
-;NMS Next 2 lines commented because of Class concept
 ; global InitializeListViewColors
 ; global ApplyRowColors
-
-; NMS Next line commented and following line added because of Lookup.ini
 ; global DEBUG_ENABLED
 DEBUG_ENABLED := IniRead('Lookup.ini', 'Debug', 'DEBUG_ENABLED')
 
 Class GuiCore {
     ; Create the main GUI for the application
     createMainGui() {
+        ; NMS 1 line added
+        moduleCore.logToFile(" ============= GuiCore / createMainGui ===============", 'NMS')
         ; Explicitly reference global variables to ensure proper assignment
         global g_mainGui, g_searchEdit, g_typeDropDown, g_fileDropDown, g_mainListView
 
@@ -67,57 +62,91 @@ Class GuiCore {
     ; Create main GUI window
         g_mainGui := Gui("+Resize", objScript.name)
         g_mainGui.OnEvent("Close", (*) => this.HandleExit())
-        ; g_mainGui.OnEvent("Size", (*) => GuiResize)
-        g_mainGui.OnEvent("Size",  (*) => this.GuiResize)
-        g_mainGui.SetFont("s12", "Segoe UI" )
+        ; NMS Next line commented
+        ; g_mainGui.OnEvent("Size", this.GuiResize)
+        ; NMS Next 2 lines
+        ; g_mainGui.SetFont("s12", "Segoe UI")
+        guiText := IniRead('Lookup.ini', 'mainGui', 'Text')
+        guiFont := IniRead('Lookup.ini', 'mainGui', 'Font')
+        g_mainGui.SetFont(guiText, guiFont)
+        g_mainGui.BackColor := bgColor := IniRead('Lookup.ini', 'mainGui', 'bgColor')
+        ; g_mainGui.SetFont("s12 Bold", "Segoe UI" )
+        ; g_mainGui.BackColor := 'yellow'
 
         moduleCore.logDebug("Main GUI window created, type: " . Type(g_mainGui))
 
         ; Add basic controls in horizontal layout - first row
         g_mainGui.Add("Text", "x10 y15", "Search Text:")
-        g_searchEdit := g_mainGui.Add("Edit", "x100 y12 w150 h25")
+        ; NMS Next 2 lines
+        ; g_searchEdit := g_mainGui.Add("Edit", "x100 y12 w150 h25")
+        g_searchEdit := g_mainGui.Add("Edit", "x+m y12 w150 h25")
 
-        g_mainGui.Add("Text", "x260 y15", "Filter by Type:")
-        g_typeDropDown := g_mainGui.Add("DropDownList", "x350 y12 w120 Choose1", ["All", "Hotkeys", "Hotstrings"])
+        ; NMS Next 4 lines
+        ; g_mainGui.Add("Text", "x260 y15", "Filter by Type:")
+        ; g_typeDropDown := g_mainGui.Add("DropDownList", "x350 y12 w120 Choose1", ["All", "Hotkeys", "Hotstrings"])
+        g_mainGui.Add("Text", "x+m y15", "Filter by Type:")
+        g_typeDropDown := g_mainGui.Add("DropDownList", "x+m y12 w120 Choose1", ["All", "Hotkeys", "Hotstrings"])
 
-        g_mainGui.Add("Text", "x480 y15", "Filter by File:")
+        ; NMS Next 2 lines
+        ; g_mainGui.Add("Text", "x480 y15", "Filter by File:")
+        g_mainGui.Add("Text", "x+m y15", "Filter by File:")
         scriptArray := ["All"]
         for scriptName in mapScriptList
             scriptArray.Push(scriptName)
-        g_fileDropDown := g_mainGui.Add("DropDownList", "x570 y12 w200 Choose1", scriptArray)
+        ; NMS Next 2 lines
+        ; g_fileDropDown := g_mainGui.Add("DropDownList", "x570 y12 w200 Choose1", scriptArray)
+        g_fileDropDown := g_mainGui.Add("DropDownList", "x+m y12 w200 Choose1", scriptArray)
 
         ; Add buttons on the right side - first row
-        searchButton := g_mainGui.Add("Button", "x780 y12 w110 h25", "Search")
+        ; searchButton := g_mainGui.Add("Button", "x780 y12 w110 h25", "Search")
+        searchButton := g_mainGui.Add("Button", "x1000 y12 w110 h25", "Search")
         searchButton.OnEvent("Click", (*) => searchGui.SearchNow())
 
-        reloadButton := g_mainGui.Add("Button", "x895 y12 w110 h25", "Reload")
+        ; reloadButton := g_mainGui.Add("Button", "x895 y12 w110 h25", "Reload")
+        reloadButton := g_mainGui.Add("Button", "x+m y12 w110 h25", "Reload")
         reloadButton.OnEvent("Click", (*) => this.HandleReload())
 
         ; Add buttons on the right side - second row
-        winShortcutsBtn := g_mainGui.Add("Button", "x780 y42 w110 h25", "Win Shortcuts")
+        ; winShortcutsBtn := g_mainGui.Add("Button", "x780 y42 w110 h25", "Win Shortcuts")
+        winShortcutsBtn := g_mainGui.Add("Button", "x1000 y42 w150 h25", "Win Shortcuts")
         winShortcutsBtn.OnEvent("Click", (*) => shortcutsWindows.ShowWindowsShortcuts())
 
-        exitButton := g_mainGui.Add("Button", "x895 y42 w110 h25", "Exit")
+        ; exitButton := g_mainGui.Add("Button", "x895 y42 w110 h25", "Exit")
+        exitButton := g_mainGui.Add("Button", "x+m y42 w110 h25", "Exit")
         exitButton.OnEvent("Click", (*) => this.HandleExit())
 
         ; Add hotkey legend in red text
-        g_mainGui.SetFont("s10 cRed", "Segoe UI")
+        ; NMS Next 2 lines
+        ; g_mainGui.SetFont("s10 cRed", "Segoe UI")
+        g_mainGui.SetFont(guiText, guiFont)
         g_mainGui.Add("Text", "x10 y50", "Hotkey Legend: ^ = Ctrl  •  ! = Alt  •  + = Shift  •  # = Win")
         g_mainGui.SetFont("s12", "Segoe UI")
 
         ; Add source legend with symbols
-        g_mainGui.SetFont("s9 cBlue", "Segoe UI")
-        g_mainGui.Add("Text", "x420 y50 w350", "Source: [✓] = Direct Code  •  [⚙] = settings.ini  •  [⚠] = Triggers (no INI)")
+        ; NMS Next 2 lines
+        ; g_mainGui.SetFont("s9 cBlue", "Segoe UI")
+        ; g_mainGui.Add("Text", "x420 y50 w350", "Source: [✓] = Direct Code  •  [⚙] = settings.ini  •  [⚠] = Triggers (no INI)")
+        g_mainGui.SetFont(guiText, guiFont)
+        g_mainGui.Add("Text", "x1000 y80 w800", "Source: [✓] = Direct Code  •  [⚙] = settings.ini  •  [⚠] = Triggers (no INI)")
         g_mainGui.SetFont("s12", "Segoe UI")
 
         ; Add color legend
-        g_mainGui.SetFont("s9 cGreen", "Segoe UI")
-        g_mainGui.Add("Text", "x10 y70 w400", "Colors: White = Normal Items  •  Red = Conflicts with Windows Shortcuts")
+        ; NMS Next 2 lines
+        ; g_mainGui.SetFont("s9 cGreen", "Segoe UI")
+        g_mainGui.SetFont(guiText, guiFont)
+        g_mainGui.Add("Text", "x10 y70 w800", "Colors: White = Normal Items  •  Red = Conflicts with Windows Shortcuts")
         g_mainGui.SetFont("s12", "Segoe UI")
+
+        ; NMS Next line added
+        g_mainGui.SetFont(guiText, guiFont)
 
         ; Create ListView control
         moduleCore.logDebug("Creating ListView control...")
-        g_mainListView := g_mainGui.Add("ListView", "x10 y90 w1000 h520 Grid", ["Command", "Type", "Description", "Script Name", "Line", "Script Path"])
+        ; NMS Next 2 lines interchanged
+        ; g_mainListView := g_mainGui.Add("ListView", "x10 y90 w1000 h470 Grid", ["Command", "Type", "Description", "Script Name", "Line", "Script Path"])
+        guiWidth := IniRead('Lookup.ini', 'mainGui', 'lvWidth')
+        guiHeight := IniRead('Lookup.ini', 'mainGui', 'lvHeight')
+        g_mainListView := g_mainGui.Add("ListView", "x10 y110 w" guiWidth " h" guiHeight " Grid", ["Command", "Type", "Description", "Script Name", "Line", "Script Path"])
 
         ; Debug ListView creation
         moduleCore.logToFile("✓ ListView created successfully")
@@ -129,12 +158,20 @@ Class GuiCore {
 
         ; Configure ListView columns
         try {
-            g_mainListView.ModifyCol(1, 150)  ; Command
-            g_mainListView.ModifyCol(2, 80)   ; Type
-            g_mainListView.ModifyCol(3, 300)  ; Description
-            g_mainListView.ModifyCol(4, 150)  ; Script Name
-            g_mainListView.ModifyCol(5, 50)   ; Line
-            g_mainListView.ModifyCol(6, 200)  ; Path
+            ; NMS Next 6 lines commented
+            ; g_mainListView.ModifyCol(1, 150)  ; Command
+            ; g_mainListView.ModifyCol(2, 80)   ; Type
+            ; g_mainListView.ModifyCol(3, 300)  ; Description
+            ; g_mainListView.ModifyCol(4, 150)  ; Script Name
+            ; g_mainListView.ModifyCol(5, 50)   ; Line
+            ; g_mainListView.ModifyCol(6, 200)  ; Path
+            ; NMS Next 6 lines added
+            g_mainListView.ModifyCol(1, c1W := IniRead('Lookup.ini', 'mainGui', 'c1W'))   ; Command
+            g_mainListView.ModifyCol(2, c2W := IniRead('Lookup.ini', 'mainGui', 'c2W'))   ; Type
+            g_mainListView.ModifyCol(3, c3W := IniRead('Lookup.ini', 'mainGui', 'c3W'))   ; Description
+            g_mainListView.ModifyCol(4, c4W := IniRead('Lookup.ini', 'mainGui', 'c4W'))   ; Script Name
+            g_mainListView.ModifyCol(5, c5W := IniRead('Lookup.ini', 'mainGui', 'c5W'))   ; Line
+            g_mainListView.ModifyCol(6, c6W := IniRead('Lookup.ini', 'mainGui', 'c6W'))   ; Path
             moduleCore.logDebug("ListView columns configured successfully")
         } catch as err {
             moduleCore.logToFile("ERROR configuring ListView columns: " err.Message)
@@ -157,7 +194,9 @@ Class GuiCore {
 
         ; Show the GUI FIRST - critical for color initialization
         moduleCore.logToFile("Showing GUI window...")
-        g_mainGui.Show("w1020 h625")
+        ; NMS Next 2 lines interchanged
+        ; g_mainGui.Show("w1020 h625")
+        g_mainGui.Show("AutoSize Center")
         moduleCore.logDebug("GUI window shown - ready for color initialization")
 
         ; Initialize colors AFTER the GUI is shown
@@ -217,6 +256,8 @@ Class GuiCore {
 
     ; Handle Reload menu option
     HandleReload() {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= GuiCore / HandleReload ===============", 'NMS')
         global objScript, arrayBaseList, mapScriptList, g_mainListView, g_lvColors
 
         moduleCore.logToFile("Reload requested...")
@@ -292,6 +333,8 @@ Class GuiCore {
 
     ; Handle Exit menu option and window close
     HandleExit() {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= GuiCore / HandleExit ===============", 'NMS')
         moduleCore.logToFile("Application exit requested...")
 
         try {

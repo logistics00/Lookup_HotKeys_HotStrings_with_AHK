@@ -3,8 +3,10 @@
 ; provides exact matching for both filenames and paths with detailed skip reasons.
 
 #Requires AutoHotkey v2.0.2+
+; NMS Next line added
+#SingleInstance Force
 
-; NMS Next 6 lines added because of Skip_Scripts.ini
+; NMS Next 6 lines added
 ; Retrieve Scripts to be skipped
 skipScripts := StrSplit(FileRead('Skip_Scripts.ini'), ',')
 arraySkipScriptList := []

@@ -15,33 +15,28 @@ conflCheck := ConflictCheckers()
 #Include TriggersIniScanner_v2.ahk
 trIniSc := TriggerIniScanner()
 
-; NMS jsongo.v2.ahk2 added for start of loadCommands
-; jsongo.v2.ahk2 can be found: github.com/groggyotter/jsongo_AHKv2
-; I have jsongo.v2.ahk2 included
+#Include D:\OneDrive\AHK\Includes\Peep_v2.ahk
+; NMS jsongo.v2.ahk can be found: https://github.com/GroggyOtter/jsongo_AHKv2
 #Include D:\OneDrive\AHK\Includes\jsongo_v2.ahk
 
-
-; NMS Next 6 lines added because of Skip_Scripts.ini
+; NMS Next 6 lines added
 ; Retrieve Scripts to be skipped
-skipScripts := StrSplit(FileRead('Skip_Scripts.ini'), ',', '`n')
+skipScripts := StrSplit(FileRead('Skip_Scripts.ini'), ',')
 arraySkipScriptList := []
 Loop skipScripts.Length
     if !InStr(skipScripts[A_Index], ';')
-        arraySkipScriptList.Push(skipScripts[A_Index])
-
-; This module requires these global functions defined elsewhere:
-; NMS Next line commented because of Class concept
-; - moduleCore.logToFile: From CoreModule.ahk
-
-; - StrJoin: From CoreModule.ahk (if used)
-; All includes are managed in the main script as preferred
+        arraySkipScriptList.Push(SubStr(skipScripts[A_Index],2))
 
 Class ScriptScanner{
     ; Retrieve running AutoHotkey scripts
     getRunningScripts() {
+        ; NMS Next line added
+        moduleCore.logToFile("========== ScriptScanner / getRunningScripts ==========", 'NMS')
         arrayScripts := []
         DetectHiddenWindows(true)
 
+        ; NMS Next 2 lines
+        ; moduleCore.logToFile("========== Script Detection ==========", false)
         moduleCore.logToFile("========== Script Detection ==========")
         moduleCore.logToFile("Time: " A_Now)
         moduleCore.logToFile("Starting script detection...")
@@ -131,6 +126,8 @@ Class ScriptScanner{
 
     ; Get script details from window handle or path
     getScript(scriptInfo) {
+        ; NMS 1 line added
+        moduleCore.logToFile("========== ScriptScanner / getScript ==========", 'NMS')
         if (IsObject(scriptInfo)) {
             if (scriptInfo.HasOwnProp("hwnd") && scriptInfo.HasOwnProp("path")) {
                 hwnd := scriptInfo.hwnd
@@ -168,13 +165,10 @@ Class ScriptScanner{
 
     ; Load hotkeys and hotstrings from scripts - FIXED WITH WORKING REGEX AND COMMAND EXTRACTION
     loadCommands(arrayScripts) {
-        ; NMS Next 13 lines added because of adding files available in folders in Search_Folders.ini
-        ; Get searchFolders from file
+        ; NMS Next 10 lines added
         searchFolders := StrSplit(FileRead('Search_Folders.ini'), ',', '`n')
-        ; Make string of arrayScripts and arraySkipScriptList for InStr search lateron
         arrayScriptsText := jsongo.Stringify(arrayScripts)
         arraySkipScriptListText := jsongo.Stringify(arraySkipScriptList)
-        ; Add *.ahk* files from folders in searchFolders. Pass scripts which are already in arrayScripts because they are running and so already in
         Loop searchFolders.Length {
             Loop Files searchFolders[A_Index] '\*.ahk*' {
                 if !(InStr(arrayScriptsText, A_LoopFileName) || InStr(arraySkipScriptListText, A_LoopFileName)) {
@@ -182,10 +176,10 @@ Class ScriptScanner{
                 }
             }
         }
-
+        moduleCore.logToFile("========== ScriptScanner / loadCommands ==========", 'NMS')
         ; FIXED: Simple working regex patterns
-        hotkeyRegex := "^(?<hk>\S+)::"                    ; Simple pattern that works with #h::
-        hotstringRegex := "^(?!$)\s*:(?<hsopts>(?:[*?BCKOPRTXZ0-9]|S(?:I|E|P))*):(?<hs>.*?)::(?<hstext>.*?)(?<comment>;.*?)?\s*$"
+        hotkeyRegex     := "^(?<hk>\S+)::"                    ; Simple pattern that works with #h::
+        hotstringRegex  := "^(?!$)\s*:(?<hsopts>(?:[*?BCKOPRTXZ0-9]|S(?:I|E|P))*):(?<hs>.*?)::(?<hstext>.*?)(?<comment>;.*?)?\s*$"
 
         hotkeyCount := 0
         hotstringCount := 0
@@ -204,9 +198,11 @@ Class ScriptScanner{
         moduleCore.logToFile("  Hotkey regex: " hotkeyRegex)
         moduleCore.logToFile("  Hotstring regex: " hotstringRegex)
 
+        cntMax := 100
+        cnt1 := 0
         for index, script in arrayScripts {
             cs := this.getScript(script)
-            ; NMS Next line added to get the path of scripts without hwnd (not running) at the final Gui
+            ; NMS Next line added
             scriptPath := script.path
 
             moduleCore.logToFile("Scanning script: " cs.scriptName " (" cs.scriptPath ")")
@@ -238,8 +234,12 @@ Class ScriptScanner{
             ; First scan for standard hotkeys/hotstrings in the script content
             moduleCore.logToFile("  STARTING LINE-BY-LINE ANALYSIS:")
 
+            cnt2 := 0
             for lineNum, line in StrSplit(scriptContents, "`n", "`r") {
                 moduleCore.logToFile("    Processing line " lineNum ": '" line "'")
+                cnt2++
+                if cnt2 < 0
+                    MsgBox('lineNum:`t' lineNum '`nline:`t' line) 
 
                 ; Check for comment blocks
                 if (RegExMatch(line, "^\s*(\/\*|\((?!.*\)))")) {
@@ -370,59 +370,81 @@ Class ScriptScanner{
                     hotstringCount++
                     localHotstringCount++
                     moduleCore.logToFile("         -> HOTSTRING CONFIRMED: " command)
-                }
-                else {
+                } else {
                     moduleCore.logToFile("      -> No hotstring match")
                 }
 
                 ; Check for Hotkey/Hotstring function calls
                 ; NMS 1 line commented and 1 line added because following me the next line acts equal as the new line
+                if (!lineType && (InStr(line, "Hotkey(", true) || InStr(line, "Hotkey,", true))) {
+                    inspLine := Trim(line)
+                    cnt3 := 0
+                    if !InStr(inspLine, 'STR ') || InStr(inspLine, ' Hotkey ', 0) || InStr(inspLine, ',Hotkey ', 0) || InStr(inspLine, ' Hotkey(', 0) || InStr(inspLine, ',Hotkey(', 0) {
+                    ; && StrLower(SubStr(inspLine, 1, 7)) == 'hotkey ' || StrLower(SubStr(inspLine, 1, 7)) == 'hotkey(' {
+                        command := ''
+                        While (posHotkey := InStr(inspLine, 'Hotkey', 0)) > 0 {
+                            ; cnt3++
+                            ; if cnt3 < cntMax
+                            ;     MsgBox('scriptPath:`t' scriptPath '`nHotkey check:`t'  cnt3 '`ninspLine:`t' inspLine '`ttest:`t' InStr(inspLine, ';')) 
+                            if (InStr(inspLine, ';') == 0 || posHotkey < InStr(inspLine, ';'))  {      ; Hotkey is possible available and before comment
+                                ; MsgBox('Hotkey check:`t'  cnt3 '`ninspLine:`t' inspLine '`ttest:`t' InStr(inspLine, ';')) 
+                                inspLine := SubStr(inspLine, posHotkey)
+                                char := SubStr(inspLine, 7, 1)                                                              ; char should be ' ' or '('
+                                endPos := 7
+                                if (char = ' ' || char = '(') {                                                             ; inspectLine starts with a Hotkey function
+                                    strtPos := Min(single := InStr(inspLine, "'") + 1, double := InStr(inspLine, '"') + 1)  ; Hotkey must start with ' or with "
+                                    if strtPos = single
+                                        endPos := InStr(inspLine, "'",,, 2)
+                                    else
+                                        endPos := InStr(inspLine, '"',,, 2)
+                                    command := command SubStr(inspLine, strtPos, endPos - strtPos) ' '   	                            ; Get the hotkey and end with a space for possible more hotkeys
+                                }
+                                inspLine := SubStr(inspLine, endPos)                                                        ; Make inspLine ready for test for another Hotkey
+                            } else
+                                inspLine := ''
+                        }
+                        if (command != '') {
+                            if (InStr(line, ";")) {
+                                commentPart := Trim(SubStr(line, InStr(line, ";") + 1))
+                                description := commentPart
+                            } else {
+                                description := ""
+                            }
+
+                            lineType := "hotkey"
+                            hotkeyCount++
+                            localHotkeyCount++
+                            moduleCore.logToFile("         -> HOTKEY FUNCTION CONFIRMED: " command)
+                        }
+                    }
+                }
+
+                ; Check for Hotkey/Hotstring function calls
+                ; NMS 1 line commented and 1 line added because following me the next line acts equal as the new line
                 ; if (!lineType && (InStr(line, "Hotkey(", true) || InStr(line, "Hotkey,", true))) {
-                if InStr(line, "Hotkey,", true) {
-                    moduleCore.logToFile("      -> Found Hotkey function call")
-                    ; Try to extract the key from Hotkey call
-                    line := Trim(line)
-                    startPos := InStr(line, ",") + 1
-                    endPos := InStr(line, ",", true, startPos) || StrLen(line) + 1
-                    command := Trim(SubStr(line, startPos, endPos - startPos))
+                ; else if (!lineType && InStr(line, "Hotstring(", true)) {
+                ;     moduleCore.logToFile("      -> Found Hotstring function call")
+                ;     ; Try to extract from Hotstring call
+                ;     line := Trim(line)
+                ;     startPos := InStr(line, "Hotstring(") + 11
+                ;     endPos := InStr(line, ",", true, startPos) - 1
 
-                    if (command != "") {
-                        if (InStr(line, ";")) {
-                            commentPart := Trim(SubStr(line, InStr(line, ";") + 1))
-                            description := commentPart
-                        } else {
-                            description := ""
-                        }
+                ;     if (endPos > startPos) {
+                ;         command := SubStr(line, startPos, endPos - startPos)
 
-                        lineType := "hotkey"
-                        hotkeyCount++
-                        localHotkeyCount++
-                        moduleCore.logToFile("         -> HOTKEY FUNCTION CONFIRMED: " command)
-                    }
-                }
-                else if (!lineType && InStr(line, "Hotstring(", true)) {
-                    moduleCore.logToFile("      -> Found Hotstring function call")
-                    ; Try to extract from Hotstring call
-                    line := Trim(line)
-                    startPos := InStr(line, "Hotstring(") + 11
-                    endPos := InStr(line, ",", true, startPos) - 1
+                ;         if (InStr(line, ";")) {
+                ;             commentPart := Trim(SubStr(line, InStr(line, ";") + 1))
+                ;             description := commentPart
+                ;         } else {
+                ;             description := ""
+                ;         }
 
-                    if (endPos > startPos) {
-                        command := SubStr(line, startPos, endPos - startPos)
-
-                        if (InStr(line, ";")) {
-                            commentPart := Trim(SubStr(line, InStr(line, ";") + 1))
-                            description := commentPart
-                        } else {
-                            description := ""
-                        }
-
-                        lineType := "hotstring"
-                        hotstringCount++
-                        localHotstringCount++
-                        moduleCore.logToFile("         -> HOTSTRING FUNCTION CONFIRMED: " command)
-                    }
-                }
+                ;         lineType := "hotstring"
+                ;         hotstringCount++
+                ;         localHotstringCount++
+                ;         moduleCore.logToFile("         -> HOTSTRING FUNCTION CONFIRMED: " command)
+                ;     }
+                ; }
 
                 ; If we identified a hotkey or hotstring, add it to our tracking
                 if (lineType) {
@@ -456,7 +478,7 @@ Class ScriptScanner{
                         status: true,
                         source: "direct code",
                         conflict: conflictInfo,
-                        ; NMS Next line added for getting the scriptpath to the final Gui for not running scripts
+                        ; NMS Next line added
                         path: scriptPath
                     })
 
@@ -592,31 +614,33 @@ Class ScriptScanner{
                     moduleCore.logToFile("    Line " item.line ": " Trim(item.content) " (" item.type ") - Command: " item.command " - Desc: '" item.description "'")
                 }
             }
-        }
 
-        ; Update the global counts for later use
-        global gHotkeyCount := hotkeyCount
-        global gHotstringCount := hotstringCount
+            ; Update the global counts for later use
+            global gHotkeyCount := hotkeyCount
+            global gHotstringCount := hotstringCount
 
-        moduleCore.logToFile("FINAL TOTALS: " hotkeyCount " hotkeys, " hotstringCount " hotstrings, " triggersCount " Triggers commands")
+            moduleCore.logToFile("FINAL TOTALS: " hotkeyCount " hotkeys, " hotstringCount " hotstrings, " triggersCount " Triggers commands")
 
-        ; Debug: Log the first few items in arrayBaseList with their descriptions
-        if (arrayBaseList.Length > 0) {
-            moduleCore.logToFile("Debug: First 5 items in arrayBaseList with descriptions:")
-            maxItems := Min(arrayBaseList.Length, 5)
-            Loop maxItems {
-                i := A_Index
-                item := arrayBaseList[i]
-                moduleCore.logToFile("  Item " i ": command='" item.command "', desc='" item.description "', type=" (item.type = "k" ? "hotkey" : "hotstring")
-                        ", file=" item.file ", line=" item.line ", source=" (item.HasOwnProp("source") ? item.source : "unknown"))
+            ; Debug: Log the first few items in arrayBaseList with their descriptions
+            if (arrayBaseList.Length > 0) {
+                moduleCore.logToFile("Debug: First 5 items in arrayBaseList with descriptions:")
+                maxItems := Min(arrayBaseList.Length, 5)
+                Loop maxItems {
+                    i := A_Index
+                    item := arrayBaseList[i]
+                    moduleCore.logToFile("  Item " i ": command='" item.command "', desc='" item.description "', type=" (item.type = "k" ? "hotkey" : "hotstring")
+                            ", file=" item.file ", line=" item.line ", source=" (item.HasOwnProp("source") ? item.source : "unknown"))
+                }
+            } else {
+                moduleCore.logToFile("Debug: arrayBaseList is empty!")
             }
-        } else {
-            moduleCore.logToFile("Debug: arrayBaseList is empty!")
         }
     }
 
     ; Helper function to debug match objects - ENHANCED
     GetMatchKeys(matchObj) {
+        ; NMS 1 line added
+        moduleCore.logToFile("========== ScriptScanner / GetMatchKeys ==========", 'NMS')
         if (!IsObject(matchObj)) {
             return "Not an object - type: " Type(matchObj)
         }
@@ -655,6 +679,8 @@ Class ScriptScanner{
     }
 
     GetNotRunningScripts(arrayScripts) {
+        ; NMS 1 line added
+        moduleCore.logToFile("========== ScriptScanner / GetNotRunningScripts ==========", 'NMS')
         moduleCore.logToFile("========== Not Running Scripts Detection ==========")
         moduleCore.logToFile("Checking for scripts that are not currently running...")
 
@@ -672,4 +698,5 @@ Class ScriptScanner{
         return arrayScripts
     }
 }
+
 ;================= End of ScriptScanner =================

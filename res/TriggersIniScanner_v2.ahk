@@ -4,7 +4,6 @@
 ; defined through the Triggers framework.
 
 ; Explicitly declare global functions and variables used from other modules
-
 ; NMS Next two lines added
 #Requires AutoHotkey v2.0+
 #SingleInstance Force
@@ -12,16 +11,19 @@
 #Include CoreModule_v2.ahk
 moduleCore := CoreModule()
 
-; NMS Next lines commented because of Class concept
-; global logToFile
-
+; NMS Next 3 lines commented, following 2 lines added
+; global moduleCore.logToFile
 global arrayBaseList
 global mapScriptList
+; arrayBaseList
+; mapScriptList
 
 Class TriggerIniScanner {
     ; Scans a script for references to the Triggers class and then checks
     ; for and processes the associated settings.ini file
     ScanTriggersIni(scriptInfo, scriptContents) {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= TriggersIniScanner / ScanTriggersIni ===============", 'NMS')
         moduleCore.logToFile("Scanning for Triggers class usage in: " scriptInfo.scriptName)
 
         ; Initialize return statistics

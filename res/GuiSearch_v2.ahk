@@ -12,11 +12,9 @@ moduleCore := CoreModule()
 listViewGui := GuiListView()
 
 ; Explicitly declare global functions and variables used from other modules
-
-; NMS Next two lines commented because of Class concept
-; global logToFile
-; global logDebug
-
+; NMS Next two lines commented
+; global moduleCore.logToFile
+; global moduleCore.logDebug
 global g_searchEdit
 global g_searchText
 global g_typeDropDown
@@ -26,17 +24,16 @@ global g_mainGui
 global arrayBaseList
 global objScript
 global g_lvColors
-
-; NMS Next line commented because of Class concept
+; NMS Next line commented
 ; global ApplyRowColors
-
-; NMS Next 2 lines because of Lookup.ini
 ; global DEBUG_ENABLED
 DEBUG_ENABLED := IniRead('Lookup.ini', 'Debug', 'DEBUG_ENABLED')
 
 Class GuiSearch {
     ; Handle search box changes
     OnSearchChange() {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= GuiSearch / OnSearchChange ===============", 'NMS')
         global g_searchEdit, g_searchText
 
         ; Get current value
@@ -47,11 +44,16 @@ Class GuiSearch {
         moduleCore.logDebug("Search text changed: '" . currentValue . "'")
 
         ; Delay filter application to avoid too frequent updates
-        SetTimer this.ApplyFilters, -300  ; 300ms delay
+        ; NMS Changed next 3 lines
+        ; SetTimer this.ApplyFilters, -300  ; 300ms delay
+        Sleep(300)
+        this.ApplyFilters()
     }
 
     ; Search button handler
     SearchNow() {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= GuiSearch / SearchNow ===============", 'NMS')
         global g_searchEdit, g_searchText
 
         ; Get and log the current value
@@ -65,6 +67,8 @@ Class GuiSearch {
 
     ; Apply all filters to the ListView with color reapplication
     ApplyFilters() {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= GuiSearch / ApplyFilters ===============", 'NMS')
         global g_searchText, g_typeDropDown, g_fileDropDown, g_mainListView, arrayBaseList, g_mainGui, objScript, g_lvColors
 
         ; Get filter values

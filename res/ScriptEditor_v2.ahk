@@ -8,17 +8,20 @@
 #Include CoreModule_v2.ahk
 moduleCore := CoreModule()
 
+; #Include ScriptScanner.ahk2
+; scriptSc := ScriptScanner()
+
 ; Explicitly declare global functions and variables used from other modules
-
-; NMS Next two lines commented because of Class concept
-; global logToFile
+; NMS Next two lines commented
+; global moduleCore.logToFile
 ; global logMsgBox
-
 global objScript
 
 Class ScriptEditor {
     ; Open script with appropriate editor
     OpenScript(path, name, lineNumber) {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= ScriptEditor / OpenScript ===============", 'NMS')
         try {
             moduleCore.logToFile("Opening script: " path " at line " lineNumber)
 
@@ -48,6 +51,8 @@ Class ScriptEditor {
 
     ; Function to find and open the default editor
     OpenWithDefaultEditor(scriptPath, lineNum) {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= ScriptEditor / OpenWithDefaultEditor ===============", 'NMS')
         ; Ensure the script exists
         if !FileExist(scriptPath) {
             moduleCore.logToFile("Script file not found: " scriptPath)
@@ -141,6 +146,8 @@ Class ScriptEditor {
 
     ; Function to find an editor executable
     FindEditor(editorName) {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= ScriptEditor / FindEditor ===============", 'NMS')
         moduleCore.logToFile("Searching for editor executable: " editorName)
 
         ; Special case for VS Code

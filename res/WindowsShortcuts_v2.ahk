@@ -10,12 +10,13 @@ moduleCore := CoreModule()
 
 Class WindowsShortcuts { 
     ; Explicitly declare global functions and variables used from other modules
-
-    ; NMS Next line commented because of Class concept
-    ; global logToFile
+    ; NMS Next line commented
+    ; global moduleCore.logToFile
 
     ; Function to show Windows Shortcuts GUI
     ShowWindowsShortcuts() {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= WindowsShortcuts / ShowWindowsShortcuts ===============", 'NMS')
         moduleCore.logToFile("Opening Windows Shortcuts reference window")
 
         ; Create the categories and shortcuts data
@@ -23,7 +24,9 @@ Class WindowsShortcuts {
 
         ; Create the GUI
         shortcutGui := Gui("+Resize", "Windows Shortcut Keys Reference")
-        shortcutGui.SetFont("s10", "Consolas")  ; Monospace font for better alignment
+        ; NMS Next 2 lines
+        ; shortcutGui.SetFont("s10", "Consolas")  ; Monospace font for better alignment
+        shortcutGui.SetFont("s16", "Consolas")  ; Monospace font for better alignment
 
         ; Build the complete text content with all categories
         allContent := this.BuildAllCategoriesText(categoriesAndShortcuts)
@@ -102,6 +105,8 @@ Class WindowsShortcuts {
 
     ; Function to build complete text content with all categories
     BuildAllCategoriesText(categoriesAndShortcuts) {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= WindowsShortcuts / BuildAllCategoriesText ===============", 'NMS')
         allContent := ""
 
         ; Add each category with header
@@ -121,6 +126,8 @@ Class WindowsShortcuts {
 
     ; Function to build filtered content based on search term
     BuildFilteredContent(categoriesAndShortcuts, searchTerm) {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= WindowsShortcuts / BuildFilteredContent ===============", 'NMS')
         if (searchTerm = "") {
             return this.BuildAllCategoriesText(categoriesAndShortcuts)
         }
@@ -166,6 +173,8 @@ Class WindowsShortcuts {
 
     ; Function to build formatted text content for a category
     BuildCategoryText(shortcuts, addSpacing := true) {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= WindowsShortcuts / BuildCategoryText ===============", 'NMS')
         if (shortcuts.Length = 0) {
             return "No shortcuts available.`r`n"
         }
@@ -203,6 +212,8 @@ Class WindowsShortcuts {
 
     ; Function to create shortcut data
     CreateShortcutsData() {
+        ; NMS 1 line added
+        moduleCore.logToFile("============= WindowsShortcuts / CreateShortcutsData ===============", 'NMS')
         data := Map()
 
         ; Keep the order logical - start with most common

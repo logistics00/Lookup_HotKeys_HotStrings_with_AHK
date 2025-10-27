@@ -13,13 +13,14 @@ moduleCore := CoreModule()
 shortcutsWindows := WindowsShortcuts()
 
 ; Explicitly declare global functions and variables used from other modules
-
-; NMS Next staytement commented because of Class concept
+; NMS Next staytement commented after #Include CoreModule.ahk2
 ; global logToFile
 
 Class ConflictCheckers {
     ; Function to get all Windows shortcuts as a flat list for conflict checking
     GetWindowsShortcutsList() {
+        ; NMS 1 line added
+        moduleCore.logToFile(" =============ConflictCheckers / GetWindowsShortcutsList =============", 'NMS')
         ; Get the shortcuts data from WindowsShortcuts.ahk
         categoriesAndShortcuts := shortcutsWindows.CreateShortcutsData()
 
@@ -46,6 +47,8 @@ Class ConflictCheckers {
 
     ; Function to normalize hotkey format for consistent comparison
     NormalizeHotkeyFormat(hotkeyStr) {
+        ; NMS 1 line added
+        moduleCore.logToFile(" =============ConflictCheckers / NormalizeHotkeyFormat ===============", 'NMS')
         if (!hotkeyStr)
             return {original: "", normalized: ""}
 
@@ -93,6 +96,8 @@ Class ConflictCheckers {
 
     ; Function to extract modifiers and base key from hotkey
     ParseHotkey(hotkeyStr) {
+        ; NMS 1 line added
+        moduleCore.logToFile(" =============ConflictCheckers / ParseHotkey ===============", 'NMS')
         if (!hotkeyStr)
             return {qualifiers: "", modifiers: "", baseKey: ""}
 
@@ -138,6 +143,8 @@ Class ConflictCheckers {
 
     ; Function to check if a script hotkey conflicts with Windows shortcuts
     CheckHotkeyConflict(scriptHotkey) {
+        ; NMS 1 line added
+        moduleCore.logToFile(" =============ConflictCheckers / CheckHotkeyConflict ===============", 'NMS')
         static windowsShortcuts := ""
 
         ; Initialize shortcuts list on first call
@@ -193,6 +200,8 @@ Class ConflictCheckers {
 
     ; Function to check if two hotkeys are related (similar modifier combinations)
     IsHotkeyRelated(hotkey1, hotkey2) {
+        ; NMS 1 line added
+        moduleCore.logToFile(" =============ConflictCheckers / IsHotkeyRelated ===============", 'NMS')
         ; Simple check for now - can be enhanced
         ; Check if one hotkey is contained within another (ignoring case)
         if (InStr(hotkey1, hotkey2, false) || InStr(hotkey2, hotkey1, false)) {
@@ -204,6 +213,8 @@ Class ConflictCheckers {
 
     ; Function to get conflict status text for display
     GetConflictStatusText(conflictInfo) {
+        ; NMS 1 line added
+        moduleCore.logToFile(" =============ConflictCheckers / GetConflictStatusText ===============", 'NMS')
         ; Debug logging to confirm function call
         try {
             moduleCore.logToFile("Called GetConflictStatusText with conflictInfo: " (IsObject(conflictInfo) ? "valid" : "invalid"))
@@ -225,6 +236,8 @@ Class ConflictCheckers {
 
     ; Function to get conflict icon for ListView
     GetConflictIcon(conflictInfo) {
+        ; NMS 1 line added
+        moduleCore.logToFile(" =============ConflictCheckers / GetConflictIcon ===============", 'NMS')
         if (!conflictInfo || !conflictInfo.isConflict)
             return 1  ; Default icon
 
